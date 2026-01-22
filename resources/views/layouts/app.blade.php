@@ -150,82 +150,135 @@
             </div>
 
             <!-- Navigation -->
-            <div class="sidebar-nav-container px-3 space-y-1">
-                <nav class="mt-4 space-y-1 pb-4">
-                    
-                    <!-- DATA MASTER -->
-                    <div x-data="{ open: {{ request()->routeIs('mesin.*') || request()->routeIs('items.*') ? 'true' : 'false' }} }">
-                        <button 
-                            @click="open = !open"
-                            class="menu-item w-full flex items-center justify-between px-4 py-2.5 text-gray-300 hover:bg-gray-700"
-                        >
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M4 6h16M4 12h16M4 18h16"/>
-                                </svg>
-                                <span class="font-semibold text-sm">Data Master</span>
-                            </div>
+<div class="sidebar-nav-container px-3 space-y-1">
+    <nav class="mt-4 space-y-1 pb-4">
+        
+        <!-- DATA MASTER -->
+        <div x-data="{ open: {{ request()->routeIs('mesin.*') || request()->routeIs('items.*') ? 'true' : 'false' }} }">
+            <button 
+                @click="open = !open"
+                class="menu-item w-full flex items-center justify-between px-4 py-2.5 text-gray-300 hover:bg-gray-700"
+            >
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                    <span class="font-semibold text-sm">Data Master</span>
+                </div>
 
-                            <svg class="w-4 h-4 transform transition-transform duration-200"
-                                :class="open ? 'rotate-180' : ''"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </button>
+                <svg class="w-4 h-4 transform transition-transform duration-200"
+                    :class="open ? 'rotate-180' : ''"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
 
-                        <div x-show="open" x-collapse class="ml-8 mt-1 space-y-1">
-                            <!-- Master Mesin -->
-                            <a href="{{ route('mesin.index') }}"
-                            class="menu-item flex items-center px-4 py-2 text-sm text-gray-300
-                                    {{ request()->routeIs('mesin.*') ? 'active' : '' }}">
-                                Master Mesin
-                            </a>
+            <div x-show="open" x-collapse class="ml-8 mt-1 space-y-1">
+                <!-- Master Mesin -->
+                <a href="{{ route('mesin.index') }}"
+                class="menu-item flex items-center px-4 py-2 text-sm text-gray-300
+                        {{ request()->routeIs('mesin.*') ? 'active' : '' }}">
+                    Master Mesin
+                </a>
 
-                            <!-- Items -->
-                            <a href="{{ route('items.index') }}"
-                            class="menu-item flex items-center px-4 py-2 text-sm text-gray-300
-                                    {{ request()->routeIs('items.*') ? 'active' : '' }}">
-                                Items
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- PRODUCTION -->
-                    <div x-data="{ open: {{ request()->routeIs('plannings.*') ? 'true' : 'false' }} }">
-                        <button 
-                            @click="open = !open"
-                            class="menu-item w-full flex items-center justify-between px-4 py-2.5 text-gray-300 hover:bg-gray-700"
-                        >
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
-                                </svg>
-                                <span class="font-semibold text-sm">Production</span>
-                            </div>
-
-                            <svg class="w-4 h-4 transform transition-transform duration-200"
-                                :class="open ? 'rotate-180' : ''"
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </button>
-
-                        <div x-show="open" x-collapse class="ml-8 mt-1 space-y-1">
-                            <!-- Planning -->
-                            <a href="{{ route('plannings.index') }}"
-                            class="menu-item flex items-center px-4 py-2 text-sm text-gray-300
-                                    {{ request()->routeIs('plannings.*') ? 'active' : '' }}">
-                                Planning
-                            </a>
-                        </div>
-                    </div>
-
-                </nav>
+                <!-- Items -->
+                <a href="{{ route('items.index') }}"
+                class="menu-item flex items-center px-4 py-2 text-sm text-gray-300
+                        {{ request()->routeIs('items.*') ? 'active' : '' }}">
+                    Items
+                </a>
             </div>
+        </div>
+
+        <!-- PRODUCTION -->
+        <div x-data="{ open: {{ request()->routeIs('plannings.*') || request()->routeIs('preview-andon.*') ? 'true' : 'false' }} }">
+            <button 
+                @click="open = !open"
+                class="menu-item w-full flex items-center justify-between px-4 py-2.5 text-gray-300 hover:bg-gray-700"
+            >
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                    </svg>
+                    <span class="font-semibold text-sm">Production</span>
+                </div>
+
+                <svg class="w-4 h-4 transform transition-transform duration-200"
+                    :class="open ? 'rotate-180' : ''"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+
+            <div x-show="open" x-collapse class="ml-8 mt-1 space-y-1">
+                <!-- Planning -->
+                <a href="{{ route('plannings.index') }}"
+                class="menu-item flex items-center px-4 py-2 text-sm text-gray-300
+                        {{ request()->routeIs('plannings.*') ? 'active' : '' }}">
+                    Planning
+                </a>
+                
+                <!-- Preview Andon -->
+                <a href="{{ route('preview-andon.index') }}"
+                class="menu-item flex items-center px-4 py-2 text-sm text-gray-300
+                        {{ request()->routeIs('preview-andon.*') ? 'active' : '' }}">
+                    Preview Andon
+                </a>
+            </div>
+        </div>
+
+        <!-- ANDON (Menu Baru) -->
+        <div x-data="{ open: {{ request()->routeIs('andon.*') ? 'true' : 'false' }} }">
+            <button 
+                @click="open = !open"
+                class="menu-item w-full flex items-center justify-between px-4 py-2.5 text-gray-300 hover:bg-gray-700"
+            >
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span class="font-semibold text-sm">Andon</span>
+                </div>
+
+                <svg class="w-4 h-4 transform transition-transform duration-200"
+                    :class="open ? 'rotate-180' : ''"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+
+            <div x-show="open" x-collapse class="ml-8 mt-1 space-y-1">
+                <!-- Preview Andon (dua tempat) -->
+                <a href="{{ route('preview-andon.index') }}"
+                class="menu-item flex items-center px-4 py-2 text-sm text-gray-300
+                        {{ request()->routeIs('preview-andon.*') ? 'active' : '' }}">
+                    Preview Andon
+                </a>
+                
+                <!-- Real-time Andon (untuk nanti) -->
+                <a href="#"
+                class="menu-item flex items-center px-4 py-2 text-sm text-gray-300 opacity-50 cursor-not-allowed">
+                    Real-time Andon
+                    <span class="ml-2 px-1.5 py-0.5 text-xs bg-yellow-500 text-white rounded">Soon</span>
+                </a>
+                
+                <!-- Andon History (untuk nanti) -->
+                <a href="#"
+                class="menu-item flex items-center px-4 py-2 text-sm text-gray-300 opacity-50 cursor-not-allowed">
+                    Andon History
+                    <span class="ml-2 px-1.5 py-0.5 text-xs bg-yellow-500 text-white rounded">Soon</span>
+                </a>
+            </div>
+        </div>
+
+    </nav>
+</div>
 
             <!-- Logout Button -->
             <div class="absolute bottom-0 left-0 right-0 p-3 border-t border-gray-800 border-opacity-50 bg-gradient-to-t from-black to-transparent">
