@@ -179,6 +179,73 @@
         0%, 100% { opacity: 1; }
         50% { opacity: 0.5; }
     }
+    
+    /* Styling untuk baris tidak aktif */
+    tr.inactive-row {
+        background-color: #f9fafb !important;
+    }
+    
+    tr.inactive-row td {
+        color: #6b7280 !important;
+    }
+    
+    tr.inactive-row .efficiency-badge {
+        background-color: #e5e7eb !important;
+        color: #6b7280 !important;
+    }
+    
+    tr.inactive-row .bg-gray-100 {
+        background-color: #e5e7eb !important;
+    }
+    
+    tr.inactive-row .text-gray-900 {
+        color: #6b7280 !important;
+    }
+    
+    tr.inactive-row .text-gray-600 {
+        color: #9ca3af !important;
+    }
+    
+    tr.inactive-row .text-green-600,
+    tr.inactive-row .text-yellow-600,
+    tr.inactive-row .text-red-600 {
+        color: #9ca3af !important;
+    }
+    
+    tr.inactive-row .font-semibold {
+        font-weight: 500 !important;
+    }
+    
+    /* Checkbox styling */
+    .status-checkbox {
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        border: 2px solid #d1d5db;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .status-checkbox:checked {
+        background-color: #10b981;
+        border-color: #10b981;
+    }
+    
+    .status-checkbox:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    /* Table save button */
+    .save-table-btn {
+        transition: all 0.3s;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .save-table-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
 </style>
 
 <div class="space-y-6">
@@ -246,18 +313,42 @@
         </div>
     </div>
 
+    <!-- Legend Status -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div class="flex flex-wrap items-center gap-4">
+            <div class="flex items-center space-x-2">
+                <div class="w-4 h-4 bg-green-500 rounded-sm"></div>
+                <span class="text-sm text-gray-600">Aktif (Diperhitungkan dalam schedule)</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div class="w-4 h-4 bg-gray-300 rounded-sm"></div>
+                <span class="text-sm text-gray-600">Tidak Aktif (Tidak dihitung dalam schedule)</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div class="w-4 h-4 bg-blue-100 border border-blue-300 rounded-sm"></div>
+                <span class="text-sm text-gray-600">Drag & Drop untuk mengubah urutan</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div class="w-4 h-4 bg-green-600 rounded-sm"></div>
+                <span class="text-sm text-gray-600">Klik "Simpan Perubahan" untuk menerapkan</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div id="andonContainer" class="scroll-container p-6 max-h-[calc(100vh-250px)] overflow-y-auto">
+        <div id="andonContainer" class="scroll-container p-6 max-h-[calc(100vh-300px)] overflow-y-auto">
             @if($mesins->count() > 0)
                 @foreach($mesins as $index => $mesin)
                     @php
                         $mesinData = $dataByMesin[$mesin->nama] ?? [];
                         $hasData = count($mesinData) > 0;
                         $currentShift = $hasData ? $mesinData->first()->shift : '1';
+                        $activeCount = $hasData ? $mesinData->where('is_active', true)->count() : 0;
+                        $inactiveCount = $hasData ? $mesinData->where('is_active', false)->count() : 0;
                     @endphp
                     
-                    <div class="mb-8 last:mb-0 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden mesin-container" data-mesin="{{ $mesin->nama }}">
+                    <div class="mb-8 last:mb-0 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden mesin-container" data-mesin="{{ $mesin->nama }}" data-mesin-id="{{ $mesin->id }}">
                         <!-- Mesin Header with Toggle -->
                         <div class="bg-white border-b border-gray-200 p-4">
                             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -270,7 +361,7 @@
                                     
                                     <div>
                                         <h2 class="text-xl font-bold text-gray-800">{{ $mesin->nama }}</h2>
-                                        <div class="flex items-center space-x-4 mt-1">
+                                        <div class="flex flex-wrap items-center gap-4 mt-1">
                                             @if($mesin->struk)
                                                 <span class="text-sm text-gray-600">
                                                     Struk: {{ $mesin->struk }}
@@ -281,29 +372,66 @@
                                                     Tonase: {{ $mesin->tonase }}
                                                 </span>
                                             @endif
-                                            <span class="text-sm text-gray-600">
-                                                Total Data: <span class="font-bold">{{ count($mesinData) }}</span>
-                                            </span>
+                                            <div class="flex items-center space-x-2">
+                                                <span class="text-sm text-gray-600">
+                                                    Total: <span class="font-bold">{{ count($mesinData) }}</span>
+                                                </span>
+                                                <div class="h-3 w-px bg-gray-300"></div>
+                                                <span class="text-sm text-green-600">
+                                                    Aktif: <span class="font-bold" id="active-count-{{ $mesin->id }}">{{ $activeCount }}</span>
+                                                </span>
+                                                <div class="h-3 w-px bg-gray-300"></div>
+                                                <span class="text-sm text-gray-500">
+                                                    Nonaktif: <span class="font-bold" id="inactive-count-{{ $mesin->id }}">{{ $inactiveCount }}</span>
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                                 
-                                <!-- Shift Toggle -->
-                                <div class="flex items-center space-x-4">
+                                <!-- Shift Toggle and Save Button -->
+                                <div class="flex flex-col md:flex-row items-start md:items-center gap-3">
                                     @if($hasData)
                                     <div class="flex items-center space-x-2">
                                         <span class="text-sm font-medium text-gray-700">Shift:</span>
                                         <label class="toggle-switch">
-                                            <input type="checkbox" {{ $currentShift == '2' ? 'checked' : '' }} 
-                                                   onchange="updateShift('{{ $mesin->nama }}', this)"
-                                                   data-shift="{{ $currentShift }}">
+                                            <input type="checkbox" 
+                                                   {{ $currentShift == '2' ? 'checked' : '' }} 
+                                                   onchange="updateShiftLocal('{{ $mesin->nama }}', this)"
+                                                   data-shift="{{ $currentShift }}"
+                                                   data-mesin="{{ $mesin->nama }}">
                                             <span class="toggle-slider"></span>
                                         </label>
-                                        <span class="shift-badge shift-{{ $currentShift }}">
+                                        <span id="shift-badge-{{ $mesin->id }}" class="shift-badge shift-{{ $currentShift }}">
                                             {{ $currentShift == '1' ? '07:00' : '19:00' }}
                                         </span>
                                     </div>
                                     @endif
+                                    
+                                    <!-- Save Button for this table -->
+                                    <div class="flex items-center gap-2">
+                                        <div id="table-loading-{{ $mesin->id }}" class="hidden">
+                                            <svg class="animate-spin h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                        </div>
+                                        <button 
+                                            onclick="saveTableChanges('{{ $mesin->nama }}', '{{ $currentShift }}', {{ $mesin->id }})"
+                                            id="save-btn-{{ $mesin->id }}"
+                                            class="hidden bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition flex items-center space-x-2 save-table-btn"
+                                            data-mesin="{{ $mesin->nama }}"
+                                            data-shift="{{ $currentShift }}"
+                                        >
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                            </svg>
+                                            <span>Simpan Perubahan</span>
+                                        </button>
+                                        <div id="save-success-{{ $mesin->id }}" class="hidden text-green-600 text-sm font-medium">
+                                            ✓ Disimpan
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -320,12 +448,16 @@
                                 </div>
                             @else
                                 <div class="overflow-x-auto rounded-lg border border-gray-200 sortable-container" 
+                                     id="table-{{ $mesin->id }}"
                                      data-mesin="{{ $mesin->nama }}" 
                                      data-shift="{{ $currentShift }}">
                                     <table class="min-w-full divide-y divide-gray-200">
                                         <thead class="bg-gray-50">
                                             <tr>
-                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 120px;">
+                                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 80px;">
+                                                    Status
+                                                </th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width: 140px;">
                                                     <div class="flex items-center space-x-2">
                                                         <span class="drag-icon">Urutan</span>
                                                     </div>
@@ -340,32 +472,45 @@
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="sortable-{{ $mesin->id }}" class="sortable-tbody">
+                                        <tbody id="sortable-{{ $mesin->id }}" class="sortable-tbody" data-mesin="{{ $mesin->nama }}">
                                             @foreach($mesinData as $key => $row)
                                                 <tr 
-                                                    class="hover:bg-gray-50 transition sortable-row border-b border-gray-200" 
+                                                    class="{{ !$row->is_active ? 'inactive-row' : 'hover:bg-gray-50' }} transition sortable-row border-b border-gray-200" 
                                                     data-id="{{ $row->id }}"
+                                                    data-is-active="{{ $row->is_active }}"
                                                     draggable="true"
                                                     id="row-{{ $row->id }}"
                                                 >
+                                                    <!-- Kolom Status Aktif -->
+                                                    <td class="px-4 py-3 whitespace-nowrap text-center">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            {{ $row->is_active ? 'checked' : '' }}
+                                                            onchange="toggleActiveLocal({{ $row->id }}, this, {{ $mesin->id }}, '{{ $mesin->nama }}')"
+                                                            class="status-checkbox"
+                                                            title="{{ $row->is_active ? 'Klik untuk nonaktifkan' : 'Klik untuk aktifkan' }}"
+                                                            data-row-id="{{ $row->id }}"
+                                                        >
+                                                    </td>
+                                                    
                                                     <td class="px-4 py-3 whitespace-nowrap">
                                                         <div class="flex items-center space-x-2">
                                                             <!-- Drag Handle -->
-                                                            <div class="drag-handle cursor-move" title="Drag untuk mengubah urutan">
+                                                            <div class="drag-handle cursor-move" title="Drag untuk mengubah urutan" data-mesin="{{ $mesin->nama }}">
                                                                 <svg class="w-5 h-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
                                                                 </svg>
                                                             </div>
                                                             
                                                             <!-- Sequence Number -->
-                                                            <span class="text-sm font-medium text-gray-900 sequence-number bg-gray-100 px-2 py-1 rounded">
+                                                            <span class="text-sm font-medium text-gray-900 sequence-number bg-gray-100 px-2 py-1 rounded min-w-[32px] text-center" data-row-id="{{ $row->id }}">
                                                                 {{ $row->sort_order ?: ($key + 1) }}
                                                             </span>
                                                             
                                                             <!-- Up/Down Buttons (Fallback) -->
                                                             <div class="flex flex-col space-y-1">
                                                                 <button 
-                                                                    onclick="moveItemUp({{ $row->id }}, '{{ $mesin->nama }}', '{{ $currentShift }}')"
+                                                                    onclick="moveItemUpLocal({{ $row->id }}, '{{ $mesin->nama }}', '{{ $currentShift }}', {{ $mesin->id }})"
                                                                     class="sort-btn up-btn"
                                                                     {{ $loop->first ? 'disabled' : '' }}
                                                                     title="Pindah ke atas"
@@ -375,7 +520,7 @@
                                                                     </svg>
                                                                 </button>
                                                                 <button 
-                                                                    onclick="moveItemDown({{ $row->id }}, '{{ $mesin->nama }}', '{{ $currentShift }}')"
+                                                                    onclick="moveItemDownLocal({{ $row->id }}, '{{ $mesin->nama }}', '{{ $currentShift }}', {{ $mesin->id }})"
                                                                     class="sort-btn down-btn"
                                                                     {{ $loop->last ? 'disabled' : '' }}
                                                                     title="Pindah ke bawah"
@@ -389,35 +534,39 @@
                                                     </td>
                                                     
                                                     <td class="px-4 py-3 whitespace-nowrap">
-                                                        <div class="text-sm font-semibold text-gray-900">{{ $row->part_no }}</div>
+                                                        <div class="text-sm font-semibold {{ !$row->is_active ? 'text-gray-500' : 'text-gray-900' }}">
+                                                            {{ $row->part_no }}
+                                                        </div>
                                                     </td>
-                                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                                                    <td class="px-4 py-3 whitespace-nowrap text-sm {{ !$row->is_active ? 'text-gray-400' : 'text-gray-600' }}">
                                                         {{ number_format($row->gsph, 2) }}
                                                     </td>
-                                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                                                    <td class="px-4 py-3 whitespace-nowrap text-sm {{ !$row->is_active ? 'text-gray-400' : 'text-gray-600' }}">
                                                         @if($row->calculated_start)
                                                             {{ \Carbon\Carbon::parse($row->calculated_start)->format('d/m/Y H:i') }}
                                                         @else
-                                                            <span class="text-gray-400">-</span>
+                                                            <span class="{{ !$row->is_active ? 'text-gray-400' : 'text-gray-400' }}">-</span>
                                                         @endif
                                                     </td>
-                                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                                                    <td class="px-4 py-3 whitespace-nowrap text-sm {{ !$row->is_active ? 'text-gray-400' : 'text-gray-600' }}">
                                                         @if($row->calculated_finish)
                                                             {{ \Carbon\Carbon::parse($row->calculated_finish)->format('d/m/Y H:i') }}
                                                         @else
-                                                            <span class="text-gray-400">-</span>
+                                                            <span class="{{ !$row->is_active ? 'text-gray-400' : 'text-gray-400' }}">-</span>
                                                         @endif
                                                     </td>
-                                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">
-                                                        {{ number_format($row->plan_qty) }}
+                                                    <td class="px-4 py-3 whitespace-nowrap">
+                                                        <div class="text-sm font-semibold {{ !$row->is_active ? 'text-gray-500' : 'text-gray-900' }}">
+                                                            {{ number_format($row->plan_qty) }}
+                                                        </div>
                                                     </td>
                                                     <td class="px-4 py-3 whitespace-nowrap">
                                                         @if($row->actual_qty > 0)
-                                                            <div class="text-sm font-bold text-green-600">
+                                                            <div class="text-sm font-bold {{ !$row->is_active ? 'text-gray-400' : 'text-green-600' }}">
                                                                 {{ number_format($row->actual_qty) }}
                                                             </div>
                                                         @else
-                                                            <div class="text-sm font-medium text-gray-400 italic">
+                                                            <div class="text-sm font-medium {{ !$row->is_active ? 'text-gray-300' : 'text-gray-400' }} italic">
                                                                 Belum diisi
                                                             </div>
                                                         @endif
@@ -427,18 +576,18 @@
                                                             @php
                                                                 $efficiencyClass = '';
                                                                 if ($row->efficiency >= 90) {
-                                                                    $efficiencyClass = 'bg-green-100 text-green-800';
+                                                                    $efficiencyClass = !$row->is_active ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-800';
                                                                 } elseif ($row->efficiency >= 70) {
-                                                                    $efficiencyClass = 'bg-yellow-100 text-yellow-800';
+                                                                    $efficiencyClass = !$row->is_active ? 'bg-gray-100 text-gray-500' : 'bg-yellow-100 text-yellow-800';
                                                                 } else {
-                                                                    $efficiencyClass = 'bg-red-100 text-red-800';
+                                                                    $efficiencyClass = !$row->is_active ? 'bg-gray-100 text-gray-500' : 'bg-red-100 text-red-800';
                                                                 }
                                                             @endphp
                                                             <span class="efficiency-badge {{ $efficiencyClass }}">
                                                                 {{ number_format($row->efficiency, 1) }}%
                                                             </span>
                                                         @else
-                                                            <span class="efficiency-badge bg-gray-100 text-gray-800">
+                                                            <span class="efficiency-badge {{ !$row->is_active ? 'bg-gray-100 text-gray-500' : 'bg-gray-100 text-gray-800' }}">
                                                                 0%
                                                             </span>
                                                         @endif
@@ -446,7 +595,9 @@
                                                     <td class="px-4 py-3 whitespace-nowrap text-sm">
                                                         <button 
                                                             onclick="openUpdateModal({{ $row->id }})"
-                                                            class="bg-black text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-800 transition flex items-center space-x-1"
+                                                            class="bg-black text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-800 transition flex items-center space-x-1 {{ !$row->is_active ? 'opacity-50 cursor-not-allowed' : '' }}"
+                                                            {{ !$row->is_active ? 'disabled' : '' }}
+                                                            title="{{ !$row->is_active ? 'Aktifkan data terlebih dahulu' : 'Update actual quantity' }}"
                                                         >
                                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -458,6 +609,43 @@
                                             @endforeach
                                         </tbody>
                                     </table>
+                                </div>
+                                
+                                <!-- Summary Footer -->
+                                <div class="mt-3 flex justify-between items-center text-sm text-gray-600">
+                                    <div>
+                                        <span class="font-medium">Catatan:</span> Klik "Simpan Perubahan" untuk menerapkan perubahan
+                                    </div>
+                                    <div class="flex items-center space-x-4">
+                                        <button 
+                                            onclick="markAllActiveLocal('{{ $mesin->nama }}', '{{ $currentShift }}', {{ $mesin->id }})"
+                                            class="text-green-600 hover:text-green-800 font-medium flex items-center space-x-1"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                            <span>Tandai Semua Aktif</span>
+                                        </button>
+                                        <button 
+                                            onclick="markAllInactiveLocal('{{ $mesin->nama }}', '{{ $currentShift }}', {{ $mesin->id }})"
+                                            class="text-gray-600 hover:text-gray-800 font-medium flex items-center space-x-1"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                            <span>Tandai Semua Nonaktif</span>
+                                        </button>
+                                        <button 
+                                            onclick="discardChanges('{{ $mesin->nama }}', {{ $mesin->id }})"
+                                            id="discard-btn-{{ $mesin->id }}"
+                                            class="hidden text-red-600 hover:text-red-800 font-medium flex items-center space-x-1"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                            <span>Batalkan Perubahan</span>
+                                        </button>
+                                    </div>
                                 </div>
                             @endif
                         </div>
@@ -485,50 +673,34 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('js/andon-functions.js') }}"></script>
+<script src="{{ asset('js/andon-drag-drop.js') }}"></script>
 <script>
-    // Utility functions
-    function getCsrfToken() {
-        return document.querySelector('meta[name="csrf-token"]')?.content || '';
-    }
+    // Global object untuk menyimpan perubahan lokal per mesin
+    let localChanges = {};
     
-    function showSuccess(message, callback) {
-        Swal.fire({
-            icon: 'success',
-            title: 'Berhasil!',
-            text: message,
-            showConfirmButton: false,
-            timer: 1500
-        }).then(() => {
-            if (callback && typeof callback === 'function') {
-                callback();
-            }
+    // Initialize semua tabel saat halaman dimuat
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inisialisasi drag & drop untuk setiap tabel
+        document.querySelectorAll('.mesin-container').forEach(container => {
+            const mesinName = container.dataset.mesin;
+            initializeTableForLocalChanges(mesinName);
         });
-    }
+        
+        // Reset local changes
+        localChanges = {};
+    });
     
-    function showError(message) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error!',
-            text: message,
-        });
-    }
-    
-    function showGlobalLoading(message = 'Memproses data...') {
-        const loadingEl = document.getElementById('globalLoading');
-        const loadingText = document.getElementById('loadingText');
-        if (loadingEl && loadingText) {
-            loadingText.textContent = message;
-            loadingEl.classList.remove('hidden');
-        }
-    }
-    
-    function hideGlobalLoading() {
-        const loadingEl = document.getElementById('globalLoading');
-        if (loadingEl) {
-            loadingEl.classList.add('hidden');
+    // Function untuk inisialisasi tabel
+    function initializeTableForLocalChanges(mesinName) {
+        if (!localChanges[mesinName]) {
+            localChanges[mesinName] = {
+                updates: [],       // Untuk status aktif/inaktif
+                sortOrder: [],     // Untuk urutan
+                shiftChanged: false, // Untuk perubahan shift
+                originalShift: document.querySelector(`.mesin-container[data-mesin="${mesinName}"] .sortable-container`).dataset.shift
+            };
         }
     }
 </script>
-<script src="{{ asset('js/andon-functions.js') }}"></script>
-<script src="{{ asset('js/andon-drag-drop.js') }}"></script>
 @endpush

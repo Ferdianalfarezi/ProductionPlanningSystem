@@ -120,6 +120,7 @@ class PreviewAndonSyncService
     {
         $dataForRecalculation = PreviewAndon::where('mesin_nama', $mesinNama)
             ->where('shift', $shift)
+            ->where('is_active', true)
             ->orderBy('sort_order', 'asc')
             ->get();
         

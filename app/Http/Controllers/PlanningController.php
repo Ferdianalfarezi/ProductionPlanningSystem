@@ -237,215 +237,238 @@ class PlanningController extends Controller
     /**
      * Import from Excel.
      */
-    public function import(Request $request)
-    {
-        \Log::info('=== PLANNING IMPORT STARTED ===');
-        
-        $validator = Validator::make($request->all(), [
-            'file' => 'required|file|mimes:xlsx,xls|max:10240',
-        ]);
+    /**
+ * Import from Excel.
+ */
+public function import(Request $request)
+{
+    \Log::info('=== PLANNING IMPORT STARTED ===');
+    
+    $validator = Validator::make($request->all(), [
+        'file' => 'required|file|mimes:xlsx,xls|max:10240',
+    ]);
 
-        if ($validator->fails()) {
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'errors' => $validator->errors(),
+        ], 422);
+    }
+
+    try {
+        $file = $request->file('file');
+        \Log::info('File uploaded:', ['name' => $file->getClientOriginalName()]);
+
+        $spreadsheet = IOFactory::load($file->getPathname());
+        $worksheet = $spreadsheet->getActiveSheet();
+        $rows = $worksheet->toArray();
+
+        if (empty($rows) || count($rows) < 2) {
             return response()->json([
                 'success' => false,
-                'errors' => $validator->errors(),
+                'message' => 'File Excel kosong atau hanya berisi header!',
             ], 422);
         }
 
-        try {
-            $file = $request->file('file');
-            \Log::info('File uploaded:', ['name' => $file->getClientOriginalName()]);
+        // Get header row - check first row
+        $header = $rows[0];
+        
+        // Check if first row is title (E-Planning Production)
+        $firstCell = trim($header[0] ?? '');
+        if (stripos($firstCell, 'E-Planning') !== false || empty($header[1])) {
+            // Use second row as header
+            $header = $rows[1] ?? [];
+            $dataStartRow = 2;
+        } else {
+            $dataStartRow = 1;
+        }
 
-            $spreadsheet = IOFactory::load($file->getPathname());
-            $worksheet = $spreadsheet->getActiveSheet();
-            $rows = $worksheet->toArray();
+        \Log::info('Header:', $header);
 
-            if (empty($rows) || count($rows) < 2) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'File Excel kosong atau hanya berisi header!',
-                ], 422);
+        // Build header map (normalize column names)
+        $headerMap = [];
+        foreach ($header as $index => $col) {
+            if ($col !== null && $col !== '') {
+                $normalized = strtolower(str_replace(['_', ' ', '-'], '', trim($col)));
+                $headerMap[$normalized] = $index;
             }
+        }
 
-            // Get header row - check first row
-            $header = $rows[0];
-            
-            // Check if first row is title (E-Planning Production)
-            $firstCell = trim($header[0] ?? '');
-            if (stripos($firstCell, 'E-Planning') !== false || empty($header[1])) {
-                // Use second row as header
-                $header = $rows[1] ?? [];
-                $dataStartRow = 2;
-            } else {
-                $dataStartRow = 1;
-            }
+        \Log::info('Header map:', $headerMap);
 
-            \Log::info('Header:', $header);
+        // Column mapping
+        $columnMapping = [
+            'id' => ['id', 'planningid'],
+            'judgement' => ['judgement', 'judge'],
+            'priority' => ['priority', 'prio'],
+            'partnofg' => ['partnofg', 'partno'],
+            'partnoparent' => ['partnoparent'],
+            'partnochild' => ['partnochild'],
+            'store' => ['store'],
+            'process' => ['process', 'proc'],
+            'line' => ['line'],
+            'rackno' => ['rackno', 'rack'],
+            'seqcalc' => ['seqcalc', 'seq'],
+            'qtykbn' => ['qtykbn', 'kbn'],
+            'qtyconsume' => ['qtyconsume', 'consume'],
+            'qtylot' => ['qtylot', 'lot'],
+            'stockmin' => ['stockmin', 'min'],
+            'stockmax' => ['stockmax', 'max'],
+            'stockprod' => ['stockprod'],
+            'stockstore' => ['stockstore'],
+            'stockrealtime' => ['stockrealtime', 'realtime'],
+            'calcparent' => ['calcparent'],
+            'calcchild' => ['calcchild'],
+            'calclot' => ['calclot'],
+            'calcprod' => ['calcprod'],
+            'addprod' => ['addprod'],
+            'totalprod' => ['totalprod', 'total'],
+            'status' => ['status', 'stat'],
+            'qtyprint' => ['qtyprint', 'print'],
+            'actual' => ['actual', 'act'],
+            'urutan' => ['urutan', 'order'],
+            'pullingtime' => ['pullingtime', 'pulling'],
+            'ltpull' => ['ltpull'],
+            'ltprod' => ['ltprod'],
+            'maxprodtime' => ['maxprodtime'],
+            'starttime' => ['starttime', 'start'],
+            'endtime' => ['endtime', 'end'],
+            'lotno' => ['lotno'],
+            'calcby' => ['calcby'],
+            'calctime' => ['calctime'],
+            'reason' => ['reason'],
+            'updatetime' => ['updatetime', 'update'],
+        ];
 
-            // Build header map (normalize column names)
-            $headerMap = [];
-            foreach ($header as $index => $col) {
-                if ($col !== null && $col !== '') {
-                    $normalized = strtolower(str_replace(['_', ' ', '-'], '', trim($col)));
-                    $headerMap[$normalized] = $index;
+        // Find column indices
+        $colIndices = [];
+        foreach ($columnMapping as $field => $aliases) {
+            foreach ($aliases as $alias) {
+                if (isset($headerMap[$alias])) {
+                    $colIndices[$field] = $headerMap[$alias];
+                    break;
                 }
             }
+        }
 
-            \Log::info('Header map:', $headerMap);
+        \Log::info('Column indices:', $colIndices);
 
-            // Column mapping
-            $columnMapping = [
-                'id' => ['id', 'planningid'],
-                'judgement' => ['judgement', 'judge'],
-                'priority' => ['priority', 'prio'],
-                'partnofg' => ['partnofg', 'partno'],
-                'partnoparent' => ['partnoparent'],
-                'partnochild' => ['partnochild'],
-                'store' => ['store'],
-                'process' => ['process', 'proc'],
-                'line' => ['line'],
-                'rackno' => ['rackno', 'rack'],
-                'seqcalc' => ['seqcalc', 'seq'],
-                'qtykbn' => ['qtykbn', 'kbn'],
-                'qtyconsume' => ['qtyconsume', 'consume'],
-                'qtylot' => ['qtylot', 'lot'],
-                'stockmin' => ['stockmin', 'min'],
-                'stockmax' => ['stockmax', 'max'],
-                'stockprod' => ['stockprod'],
-                'stockstore' => ['stockstore'],
-                'stockrealtime' => ['stockrealtime', 'realtime'],
-                'calcparent' => ['calcparent'],
-                'calcchild' => ['calcchild'],
-                'calclot' => ['calclot'],
-                'calcprod' => ['calcprod'],
-                'addprod' => ['addprod'],
-                'totalprod' => ['totalprod', 'total'],
-                'status' => ['status', 'stat'],
-                'qtyprint' => ['qtyprint', 'print'],
-                'actual' => ['actual', 'act'],
-                'urutan' => ['urutan', 'order'],
-                'pullingtime' => ['pullingtime', 'pulling'],
-                'ltpull' => ['ltpull'],
-                'ltprod' => ['ltprod'],
-                'maxprodtime' => ['maxprodtime'],
-                'starttime' => ['starttime', 'start'],
-                'endtime' => ['endtime', 'end'],
-                'lotno' => ['lotno'],
-                'calcby' => ['calcby'],
-                'calctime' => ['calctime'],
-                'reason' => ['reason'],
-                'updatetime' => ['updatetime', 'update'],
+        // DELETE ALL EXISTING DATA BEFORE IMPORT
+        $deletedCount = Planning::count();
+        Planning::truncate();
+        \Log::info("Deleted {$deletedCount} existing planning records");
+
+        $imported = 0;
+        $skipped = 0;
+        $errors = [];
+
+        // Process data rows
+        for ($i = $dataStartRow; $i < count($rows); $i++) {
+            $row = $rows[$i];
+            $rowNumber = $i + 1;
+
+            // Get values
+            $planningId = $this->getValue($row, $colIndices, 'id');
+            $partNoFg = $this->getValue($row, $colIndices, 'partnofg');
+
+            // Skip empty rows (both planning_id and part_no_fg are empty)
+            if (empty($planningId) && empty($partNoFg)) {
+                \Log::info("Row {$rowNumber}: Both ID and PART_NO_FG are empty, skipping");
+                $skipped++;
+                continue;
+            }
+
+            // Prepare data
+            $data = [
+                'planning_id' => $this->parseInteger($planningId),
+                'judgement' => $this->getValue($row, $colIndices, 'judgement'),
+                'priority' => $this->parseInteger($this->getValue($row, $colIndices, 'priority')),
+                'part_no_fg' => $partNoFg,
+                'part_no_parent' => $this->getValue($row, $colIndices, 'partnoparent'),
+                'part_no_child' => $this->getValue($row, $colIndices, 'partnochild'),
+                'store' => $this->getValue($row, $colIndices, 'store'),
+                'process' => $this->getValue($row, $colIndices, 'process'),
+                'line' => $this->getValue($row, $colIndices, 'line'),
+                'rack_no' => $this->getValue($row, $colIndices, 'rackno'),
+                'seq_calc' => $this->parseInteger($this->getValue($row, $colIndices, 'seqcalc')),
+                'qty_kbn' => $this->parseInteger($this->getValue($row, $colIndices, 'qtykbn')),
+                'qty_consume' => $this->parseInteger($this->getValue($row, $colIndices, 'qtyconsume')),
+                'qty_lot' => $this->parseInteger($this->getValue($row, $colIndices, 'qtylot')),
+                'stock_min' => $this->parseInteger($this->getValue($row, $colIndices, 'stockmin')),
+                'stock_max' => $this->parseInteger($this->getValue($row, $colIndices, 'stockmax')),
+                'stock_prod' => $this->parseInteger($this->getValue($row, $colIndices, 'stockprod')),
+                'stock_store' => $this->parseInteger($this->getValue($row, $colIndices, 'stockstore')),
+                'stock_realtime' => $this->parseInteger($this->getValue($row, $colIndices, 'stockrealtime')),
+                'calc_parent' => $this->parseInteger($this->getValue($row, $colIndices, 'calcparent')),
+                'calc_child' => $this->parseInteger($this->getValue($row, $colIndices, 'calcchild')),
+                'calc_lot' => $this->parseInteger($this->getValue($row, $colIndices, 'calclot')),
+                'calc_prod' => $this->parseInteger($this->getValue($row, $colIndices, 'calcprod')),
+                'add_prod' => $this->parseInteger($this->getValue($row, $colIndices, 'addprod')),
+                'total_prod' => $this->parseInteger($this->getValue($row, $colIndices, 'totalprod')),
+                'status' => $this->getValue($row, $colIndices, 'status'),
+                'qty_print' => $this->parseInteger($this->getValue($row, $colIndices, 'qtyprint')),
+                'actual' => $this->parseInteger($this->getValue($row, $colIndices, 'actual')),
+                'urutan' => $this->parseInteger($this->getValue($row, $colIndices, 'urutan')),
+                'pulling_time' => $this->parseDateTime($this->getValue($row, $colIndices, 'pullingtime')),
+                'lt_pull' => $this->parseInteger($this->getValue($row, $colIndices, 'ltpull')),
+                'lt_prod' => $this->parseInteger($this->getValue($row, $colIndices, 'ltprod')),
+                'max_prod_time' => $this->parseDateTime($this->getValue($row, $colIndices, 'maxprodtime')),
+                'start_time' => $this->parseDateTime($this->getValue($row, $colIndices, 'starttime')),
+                'end_time' => $this->parseDateTime($this->getValue($row, $colIndices, 'endtime')),
+                'lot_no' => $this->getValue($row, $colIndices, 'lotno'),
+                'calc_by' => $this->getValue($row, $colIndices, 'calcby'),
+                'calc_time' => $this->parseDateTime($this->getValue($row, $colIndices, 'calctime')),
+                'reason' => $this->getValue($row, $colIndices, 'reason'),
+                'update_time_excel' => $this->parseDateTime($this->getValue($row, $colIndices, 'updatetime')),
             ];
 
-            // Find column indices
-            $colIndices = [];
-            foreach ($columnMapping as $field => $aliases) {
-                foreach ($aliases as $alias) {
-                    if (isset($headerMap[$alias])) {
-                        $colIndices[$field] = $headerMap[$alias];
-                        break;
-                    }
+            try {
+                Planning::create($data);
+                $imported++;
+                
+                // Log first 3 rows for debugging
+                if ($imported <= 3) {
+                    \Log::info("Row {$rowNumber} imported successfully:", [
+                        'planning_id' => $data['planning_id'],
+                        'part_no_fg' => $data['part_no_fg'],
+                        'status' => $data['status']
+                    ]);
                 }
+            } catch (\Exception $e) {
+                $errors[] = "Baris {$rowNumber}: {$e->getMessage()}";
+                $skipped++;
+                \Log::error("Row {$rowNumber} failed:", ['error' => $e->getMessage(), 'data' => $data]);
             }
-
-            \Log::info('Column indices:', $colIndices);
-
-            $imported = 0;
-            $skipped = 0;
-            $errors = [];
-
-            // Process data rows
-            for ($i = $dataStartRow; $i < count($rows); $i++) {
-                $row = $rows[$i];
-                $rowNumber = $i + 1;
-
-                // Get values
-                $planningId = $this->getValue($row, $colIndices, 'id');
-                $partNoFg = $this->getValue($row, $colIndices, 'partnofg');
-
-                // Skip empty rows
-                if (empty($planningId) && empty($partNoFg)) {
-                    continue;
-                }
-
-                // Prepare data
-                $data = [
-                    'planning_id' => $this->parseInteger($planningId),
-                    'judgement' => $this->getValue($row, $colIndices, 'judgement'),
-                    'priority' => $this->parseInteger($this->getValue($row, $colIndices, 'priority')),
-                    'part_no_fg' => $partNoFg,
-                    'part_no_parent' => $this->getValue($row, $colIndices, 'partnoparent'),
-                    'part_no_child' => $this->getValue($row, $colIndices, 'partnochild'),
-                    'store' => $this->getValue($row, $colIndices, 'store'),
-                    'process' => $this->getValue($row, $colIndices, 'process'),
-                    'line' => $this->getValue($row, $colIndices, 'line'),
-                    'rack_no' => $this->getValue($row, $colIndices, 'rackno'),
-                    'seq_calc' => $this->parseInteger($this->getValue($row, $colIndices, 'seqcalc')),
-                    'qty_kbn' => $this->parseInteger($this->getValue($row, $colIndices, 'qtykbn')),
-                    'qty_consume' => $this->parseInteger($this->getValue($row, $colIndices, 'qtyconsume')),
-                    'qty_lot' => $this->parseInteger($this->getValue($row, $colIndices, 'qtylot')),
-                    'stock_min' => $this->parseInteger($this->getValue($row, $colIndices, 'stockmin')),
-                    'stock_max' => $this->parseInteger($this->getValue($row, $colIndices, 'stockmax')),
-                    'stock_prod' => $this->parseInteger($this->getValue($row, $colIndices, 'stockprod')),
-                    'stock_store' => $this->parseInteger($this->getValue($row, $colIndices, 'stockstore')),
-                    'stock_realtime' => $this->parseInteger($this->getValue($row, $colIndices, 'stockrealtime')),
-                    'calc_parent' => $this->parseInteger($this->getValue($row, $colIndices, 'calcparent')),
-                    'calc_child' => $this->parseInteger($this->getValue($row, $colIndices, 'calcchild')),
-                    'calc_lot' => $this->parseInteger($this->getValue($row, $colIndices, 'calclot')),
-                    'calc_prod' => $this->parseInteger($this->getValue($row, $colIndices, 'calcprod')),
-                    'add_prod' => $this->parseInteger($this->getValue($row, $colIndices, 'addprod')),
-                    'total_prod' => $this->parseInteger($this->getValue($row, $colIndices, 'totalprod')),
-                    'status' => $this->getValue($row, $colIndices, 'status'),
-                    'qty_print' => $this->parseInteger($this->getValue($row, $colIndices, 'qtyprint')),
-                    'actual' => $this->parseInteger($this->getValue($row, $colIndices, 'actual')),
-                    'urutan' => $this->parseInteger($this->getValue($row, $colIndices, 'urutan')),
-                    'pulling_time' => $this->parseDateTime($this->getValue($row, $colIndices, 'pullingtime')),
-                    'lt_pull' => $this->parseInteger($this->getValue($row, $colIndices, 'ltpull')),
-                    'lt_prod' => $this->parseInteger($this->getValue($row, $colIndices, 'ltprod')),
-                    'max_prod_time' => $this->parseDateTime($this->getValue($row, $colIndices, 'maxprodtime')),
-                    'start_time' => $this->parseDateTime($this->getValue($row, $colIndices, 'starttime')),
-                    'end_time' => $this->parseDateTime($this->getValue($row, $colIndices, 'endtime')),
-                    'lot_no' => $this->getValue($row, $colIndices, 'lotno'),
-                    'calc_by' => $this->getValue($row, $colIndices, 'calcby'),
-                    'calc_time' => $this->parseDateTime($this->getValue($row, $colIndices, 'calctime')),
-                    'reason' => $this->getValue($row, $colIndices, 'reason'),
-                    'update_time_excel' => $this->parseDateTime($this->getValue($row, $colIndices, 'updatetime')),
-                ];
-
-                try {
-                    Planning::create($data);
-                    $imported++;
-                } catch (\Exception $e) {
-                    $errors[] = "Baris {$rowNumber}: {$e->getMessage()}";
-                    $skipped++;
-                    \Log::error("Row {$rowNumber} failed:", ['error' => $e->getMessage()]);
-                }
-            }
-
-            $message = "Import selesai! {$imported} data berhasil diimport.";
-            if ($skipped > 0) {
-                $message .= " {$skipped} data dilewati.";
-            }
-
-            \Log::info("=== IMPORT COMPLETED: {$imported} imported, {$skipped} skipped ===");
-
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'imported' => $imported,
-                'skipped' => $skipped,
-                'errors' => array_slice($errors, 0, 10),
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Import failed: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal mengimport file: ' . $e->getMessage(),
-            ], 500);
         }
+
+        $message = "Import selesai! {$imported} data berhasil diimport.";
+        if ($deletedCount > 0) {
+            $message .= " {$deletedCount} data lama telah dihapus.";
+        }
+        if ($skipped > 0) {
+            $message .= " {$skipped} data dilewati.";
+        }
+
+        \Log::info("=== IMPORT COMPLETED: {$imported} imported, {$deletedCount} deleted, {$skipped} skipped ===");
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'imported' => $imported,
+            'deleted' => $deletedCount,
+            'skipped' => $skipped,
+            'errors' => array_slice($errors, 0, 10),
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Import failed: ' . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal mengimport file: ' . $e->getMessage(),
+        ], 500);
     }
+}
 
     /**
      * Get value from row by column index.

@@ -53,14 +53,17 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{planning}', [PlanningController::class, 'destroy'])->name('destroy');
     });
 
+    // Preview Andon Routes
     Route::prefix('preview-andon')->group(function () {
         Route::get('/', [PreviewAndonController::class, 'index'])->name('preview-andon.index');
         Route::post('/sync', [PreviewAndonController::class, 'sync'])->name('preview-andon.sync');
         Route::post('/update-shift', [PreviewAndonController::class, 'updateShift'])->name('preview-andon.update-shift');
-        Route::post('/{id}/update-actual', [PreviewAndonController::class, 'updateActual'])->name('preview-andon.update-actual');
-        Route::get('/{id}/detail', [PreviewAndonController::class, 'detail'])->name('preview-andon.detail');
-        Route::get('/{id}/edit', [PreviewAndonController::class, 'edit'])->name('preview-andon.edit'); // Tambah ini
+        Route::post('/toggle-active/{id}', [PreviewAndonController::class, 'toggleActive'])->name('preview-andon.toggle-active');
+        Route::post('/update-actual/{id}', [PreviewAndonController::class, 'updateActual'])->name('preview-andon.update-actual');
+        Route::get('/detail/{id}', [PreviewAndonController::class, 'detail'])->name('preview-andon.detail');
         Route::post('/reorder', [PreviewAndonController::class, 'reorder'])->name('preview-andon.reorder');
-        Route::post('/{id}/toggle-status', [PreviewAndonController::class, 'toggleStatus'])->name('preview-andon.toggle-status');
+        Route::post('/bulk-update', [PreviewAndonController::class, 'bulkUpdate'])->name('preview-andon.bulk-update');
+        Route::get('/preview-andon/get-mesin-data', [PreviewAndonController::class, 'getMesinData'])->name('preview-andon.get-mesin-data');
     });
+    
 });

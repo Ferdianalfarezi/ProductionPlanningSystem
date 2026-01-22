@@ -28,7 +28,8 @@ class PreviewAndon extends Model
         'shift_sequence',
         'mesin_id',
         'planning_id',
-        'is_active',
+        'is_active', // Tambahkan ini
+        'sort_order',
     ];
 
     protected function casts(): array
@@ -45,6 +46,8 @@ class PreviewAndon extends Model
             'calculated_finish' => 'datetime',
             'production_duration' => 'decimal:2',
             'shift_sequence' => 'integer',
+            'is_active' => 'boolean', // Tambahkan ini
+            'sort_order' => 'integer',
         ];
     }
 
@@ -66,6 +69,7 @@ class PreviewAndon extends Model
         // Ambil semua data untuk mesin ini dengan shift yang sama
         $dataForRecalculation = PreviewAndon::where('mesin_nama', $this->mesin_nama)
             ->where('shift', $this->shift)
+             ->where('is_active', true)
             ->orderBy('sort_order', 'asc')
             ->get();
 
@@ -148,14 +152,33 @@ class PreviewAndon extends Model
         return $query->orderBy('sort_order')->orderBy('created_at');
     }
 
-    // Scope untuk data aktif
+    /**
+     * Scope untuk data aktif
+     */
     public function scopeActive($query)
     {
-        return $query->where('is_active', 1);
+        return $query->where('is_active', true);
     }
 
+    /**
+     * Scope untuk data tidak aktif
+     */
     public function scopeInactive($query)
     {
-        return $query->where('is_active', 0);
+        return $query->where('is_active', false);
+    }
+
+    /**
+     * Toggle status aktif
+     */
+    public function toggleActive()
+    {
+        $this->is_active = !$this->is_active;
+        $this->save();
+        
+        // Recalculate schedule setelah toggle
+        $this->recalculateSchedule();
+        
+        return $this->is_active;
     }
 }
