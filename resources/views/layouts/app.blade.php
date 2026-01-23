@@ -120,6 +120,158 @@
             border-color: rgba(220, 38, 38, 0.4);
             transform: translateY(-1px);
         }
+
+         .gradient-bg {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .data-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid #667eea;
+    }
+    
+    .data-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .shift-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .shift-1 {
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+    
+    .shift-2 {
+        background-color: #f3e8ff;
+        color: #6d28d9;
+    }
+    
+    .status-badge {
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        display: inline-block;
+    }
+    
+    .status-active {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+    
+    .status-inactive {
+        background-color: #f3f4f6;
+        color: #6b7280;
+    }
+    
+    .efficiency-badge {
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        min-width: 70px;
+        display: inline-block;
+        text-align: center;
+    }
+    
+    .eff-high { background-color: #d1fae5; color: #065f46; }
+    .eff-medium { background-color: #fef3c7; color: #92400e; }
+    .eff-low { background-color: #fee2e2; color: #991b1b; }
+    .eff-none { background-color: #f3f4f6; color: #4b5563; }
+    
+    .scrollable-table {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    .scrollable-table::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .scrollable-table::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    
+    .scrollable-table::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 4px;
+    }
+    
+    .scrollable-table::-webkit-scrollbar-thumb:hover {
+        background: #a1a1a1;
+    }
+    
+    .quick-filter-btn {
+        transition: all 0.2s;
+    }
+    
+    .quick-filter-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e5e7eb;
+        transition: all 0.3s;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+    
+    .icon-purple { background-color: #e9d5ff; color: #7c3aed; }
+    .icon-blue { background-color: #dbeafe; color: #3b82f6; }
+    .icon-green { background-color: #d1fae5; color: #10b981; }
+    .icon-orange { background-color: #fed7aa; color: #f97316; }
+    
+    .mesin-header {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .filter-input {
+        border: 2px solid #e5e7eb;
+        transition: all 0.2s;
+    }
+    
+    .filter-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .export-btn {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        transition: all 0.3s;
+    }
+    
+    .export-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+    }
     </style>
 </head>
 <body class="bg-gray-50 font-sans antialiased">
@@ -222,60 +374,73 @@
                     Planning
                 </a>
                 
-                <!-- Preview Andon -->
-                <a href="{{ route('preview-andon.index') }}"
-                class="menu-item flex items-center px-4 py-2 text-sm text-gray-300
-                        {{ request()->routeIs('preview-andon.*') ? 'active' : '' }}">
-                    Preview Andon
-                </a>
+                
             </div>
         </div>
 
         <!-- ANDON (Menu Baru) -->
-        <div x-data="{ open: {{ request()->routeIs('andon.*') ? 'true' : 'false' }} }">
-            <button 
-                @click="open = !open"
-                class="menu-item w-full flex items-center justify-between px-4 py-2.5 text-gray-300 hover:bg-gray-700"
-            >
-                <div class="flex items-center">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                    </svg>
-                    <span class="font-semibold text-sm">Andon</span>
-                </div>
-
-                <svg class="w-4 h-4 transform transition-transform duration-200"
-                    :class="open ? 'rotate-180' : ''"
-                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M19 9l-7 7-7-7"/>
-                </svg>
-            </button>
-
-            <div x-show="open" x-collapse class="ml-8 mt-1 space-y-1">
-                <!-- Preview Andon (dua tempat) -->
-                <a href="{{ route('preview-andon.index') }}"
-                class="menu-item flex items-center px-4 py-2 text-sm text-gray-300
-                        {{ request()->routeIs('preview-andon.*') ? 'active' : '' }}">
-                    Preview Andon
-                </a>
-                
-                <!-- Real-time Andon (untuk nanti) -->
-                <a href="#"
-                class="menu-item flex items-center px-4 py-2 text-sm text-gray-300 opacity-50 cursor-not-allowed">
-                    Real-time Andon
-                    <span class="ml-2 px-1.5 py-0.5 text-xs bg-yellow-500 text-white rounded">Soon</span>
-                </a>
-                
-                <!-- Andon History (untuk nanti) -->
-                <a href="#"
-                class="menu-item flex items-center px-4 py-2 text-sm text-gray-300 opacity-50 cursor-not-allowed">
-                    Andon History
-                    <span class="ml-2 px-1.5 py-0.5 text-xs bg-yellow-500 text-white rounded">Soon</span>
-                </a>
-            </div>
+<div x-data="{ open: {{ request()->routeIs('andon.*') ? 'true' : 'false' }} }">
+    <button 
+        @click="open = !open"
+        class="menu-item w-full flex items-center justify-between px-4 py-2.5 text-gray-300 hover:bg-gray-700"
+    >
+        <div class="flex items-center">
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            <span class="font-semibold text-sm">Andon</span>
         </div>
+
+        <svg class="w-4 h-4 transform transition-transform duration-200"
+            :class="open ? 'rotate-180' : ''"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 9l-7 7-7-7"/>
+        </svg>
+    </button>
+
+    <div x-show="open" x-collapse class="ml-8 mt-1 space-y-1">
+        
+        
+        <!-- Preview Andon -->
+        <a href="{{ route('andon.preview') }}"
+           class="menu-item flex items-center px-4 py-2 text-sm text-gray-300
+                {{ request()->routeIs('andon.preview') ? 'active' : '' }}">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+            Preview Andon
+        </a>
+        
+        <!-- Andon Mesin -->
+        <a href="{{ route('andon.mesin') }}"
+           class="menu-item flex items-center px-4 py-2 text-sm text-gray-300
+                {{ request()->routeIs('andon.mesin') ? 'active' : '' }}">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+            </svg>
+            Andon Mesin
+        </a>
+
+        <a href="{{ route('andon.lane') }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="menu-item flex items-center px-4 py-2 text-sm text-gray-300
+                    {{ request()->routeIs('andon.lane') ? 'active' : '' }}">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+                </svg>
+                Andon Lane
+            </a>
+
+    </div>
+</div>
 
     </nav>
 </div>

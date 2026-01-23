@@ -6,6 +6,7 @@ use App\Http\Controllers\MesinController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\PlanningController;
 use App\Http\Controllers\PreviewAndonController;
+use App\Http\Controllers\AndonMesinController;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes
@@ -53,17 +54,36 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{planning}', [PlanningController::class, 'destroy'])->name('destroy');
     });
 
-    // Preview Andon Routes
-    Route::prefix('preview-andon')->group(function () {
-        Route::get('/', [PreviewAndonController::class, 'index'])->name('preview-andon.index');
-        Route::post('/sync', [PreviewAndonController::class, 'sync'])->name('preview-andon.sync');
-        Route::post('/update-shift', [PreviewAndonController::class, 'updateShift'])->name('preview-andon.update-shift');
-        Route::post('/toggle-active/{id}', [PreviewAndonController::class, 'toggleActive'])->name('preview-andon.toggle-active');
-        Route::post('/update-actual/{id}', [PreviewAndonController::class, 'updateActual'])->name('preview-andon.update-actual');
-        Route::get('/detail/{id}', [PreviewAndonController::class, 'detail'])->name('preview-andon.detail');
-        Route::post('/reorder', [PreviewAndonController::class, 'reorder'])->name('preview-andon.reorder');
-        Route::post('/bulk-update', [PreviewAndonController::class, 'bulkUpdate'])->name('preview-andon.bulk-update');
-        Route::get('/preview-andon/get-mesin-data', [PreviewAndonController::class, 'getMesinData'])->name('preview-andon.get-mesin-data');
+    // routes/web.php
+    Route::prefix('andon')->group(function () {
+        // Routes Preview Andon
+        Route::get('/preview', [PreviewAndonController::class, 'index'])->name('andon.preview');
+        Route::post('/sync', [PreviewAndonController::class, 'sync'])->name('andon.sync');
+        Route::post('/{id}/toggle-active', [PreviewAndonController::class, 'toggleActive'])->name('andon.toggle-active');
+        Route::post('/update-shift', [PreviewAndonController::class, 'updateShift'])->name('andon.update-shift');
+        Route::post('/{id}/update-actual', [PreviewAndonController::class, 'updateActual'])->name('andon.update-actual');
+        Route::get('/{id}/detail', [PreviewAndonController::class, 'detail'])->name('andon.detail');
+        Route::post('/reorder', [PreviewAndonController::class, 'reorder'])->name('andon.reorder');
+        Route::post('/bulk-update', [PreviewAndonController::class, 'bulkUpdate'])->name('andon.bulk-update');
+        Route::get('/get-mesin-data', [PreviewAndonController::class, 'getMesinData'])->name('andon.get-mesin-data');
+        
+        // Submit dari Preview Andon ke Andon Mesin
+        Route::post('/submit-to-mesin', [PreviewAndonController::class, 'submitToAndonMesin'])->name('andon.submit-to-mesin');
+        
+        // Routes Andon Mesin
+        Route::prefix('mesin')->group(function () {
+            Route::get('/', [AndonMesinController::class, 'index'])->name('andon.mesin');
+            Route::get('/data', [AndonMesinController::class, 'getData'])->name('andon.mesin.data');
+            Route::post('/', [AndonMesinController::class, 'store'])->name('andon.mesin.store');
+            Route::get('/last-submission/{mesinId}', [AndonMesinController::class, 'getLastSubmissionStatus'])->name('andon.mesin.last-submission');
+            Route::get('/dates', [AndonMesinController::class, 'getAvailableDates'])->name('andon.mesin.dates');
+            Route::post('/export', [AndonMesinController::class, 'export'])->name('andon.mesin.export');
+            Route::delete('/{id}', [AndonMesinController::class, 'destroy'])->name('andon.mesin.destroy');
+        });
     });
+
+    // Andon Lane
+Route::get('/andon/lane', [App\Http\Controllers\AndonLaneController::class, 'index'])->name('andon.lane');
+Route::get('/andon/lane/data', [App\Http\Controllers\AndonLaneController::class, 'getData'])->name('andon.lane.data');
     
 });

@@ -11,7 +11,7 @@
                 </button>
             </div>
             
-            <form id="updateForm">
+            <form id="updateForm" onsubmit="handleUpdateSubmit(event)">
                 @csrf
                 <input type="hidden" id="updateId" name="id">
                 

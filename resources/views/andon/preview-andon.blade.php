@@ -86,6 +86,43 @@
         min-width: 60px;
     }
     
+    /* Style untuk tombol submit */
+    .submit-btn {
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        color: white;
+        transition: all 0.3s;
+        box-shadow: 0 4px 6px rgba(139, 92, 246, 0.2);
+    }
+    
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(139, 92, 246, 0.3);
+        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    }
+    
+    .submit-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    
+    .submitted-badge {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.8; }
+    }
+    
+    .last-submission-info {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+    
     /* Custom scrollbar */
     .scroll-container::-webkit-scrollbar {
         width: 8px;
@@ -278,6 +315,15 @@
                 <span>Sync Data</span>
             </button>
             
+            <a href="{{ route('andon.mesin') }}" 
+               class="bg-purple-600 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-purple-700 transition flex items-center space-x-2"
+               target="_blank">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                </svg>
+                <span>Lihat Andon Mesin</span>
+            </a>
+            
             <div class="bg-gray-100 border border-gray-200 rounded-lg px-4 py-2.5">
                 <div class="flex items-center space-x-3">
                     <div class="text-center">
@@ -313,27 +359,7 @@
         </div>
     </div>
 
-    <!-- Legend Status -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <div class="flex flex-wrap items-center gap-4">
-            <div class="flex items-center space-x-2">
-                <div class="w-4 h-4 bg-green-500 rounded-sm"></div>
-                <span class="text-sm text-gray-600">Aktif (Diperhitungkan dalam schedule)</span>
-            </div>
-            <div class="flex items-center space-x-2">
-                <div class="w-4 h-4 bg-gray-300 rounded-sm"></div>
-                <span class="text-sm text-gray-600">Tidak Aktif (Tidak dihitung dalam schedule)</span>
-            </div>
-            <div class="flex items-center space-x-2">
-                <div class="w-4 h-4 bg-blue-100 border border-blue-300 rounded-sm"></div>
-                <span class="text-sm text-gray-600">Drag & Drop untuk mengubah urutan</span>
-            </div>
-            <div class="flex items-center space-x-2">
-                <div class="w-4 h-4 bg-green-600 rounded-sm"></div>
-                <span class="text-sm text-gray-600">Klik "Simpan Perubahan" untuk menerapkan</span>
-            </div>
-        </div>
-    </div>
+    phph
 
     <!-- Main Content -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -348,7 +374,10 @@
                         $inactiveCount = $hasData ? $mesinData->where('is_active', false)->count() : 0;
                     @endphp
                     
-                    <div class="mb-8 last:mb-0 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden mesin-container" data-mesin="{{ $mesin->nama }}" data-mesin-id="{{ $mesin->id }}">
+                    <div class="mb-8 last:mb-0 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden mesin-container" 
+                         data-mesin="{{ $mesin->nama }}" 
+                         data-mesin-id="{{ $mesin->id }}"
+                         id="mesin-container-{{ $mesin->id }}">
                         <!-- Mesin Header with Toggle -->
                         <div class="bg-white border-b border-gray-200 p-4">
                             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -359,8 +388,13 @@
                                         </svg>
                                     </div>
                                     
-                                    <div>
-                                        <h2 class="text-xl font-bold text-gray-800">{{ $mesin->nama }}</h2>
+                                    <div class="flex-1">
+                                        <div class="flex items-center space-x-3">
+                                            <h2 class="text-xl font-bold text-gray-800">{{ $mesin->nama }}</h2>
+                                            <div id="submit-badge-{{ $mesin->id }}">
+                                                <!-- Badge akan diisi oleh JavaScript -->
+                                            </div>
+                                        </div>
                                         <div class="flex flex-wrap items-center gap-4 mt-1">
                                             @if($mesin->struk)
                                                 <span class="text-sm text-gray-600">
@@ -386,10 +420,14 @@
                                                 </span>
                                             </div>
                                         </div>
+                                        <!-- Info last submission -->
+                                        <div id="last-submission-info-{{ $mesin->id }}" class="last-submission-info mt-2">
+                                            <!-- Akan diisi oleh JavaScript -->
+                                        </div>
                                     </div>
                                 </div>
                                 
-                                <!-- Shift Toggle and Save Button -->
+                                <!-- Shift Toggle, Save Button, dan Submit Button -->
                                 <div class="flex flex-col md:flex-row items-start md:items-center gap-3">
                                     @if($hasData)
                                     <div class="flex items-center space-x-2">
@@ -408,14 +446,17 @@
                                     </div>
                                     @endif
                                     
-                                    <!-- Save Button for this table -->
-                                    <div class="flex items-center gap-2">
+                                    <!-- Button Group -->
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <!-- Loading Indicator -->
                                         <div id="table-loading-{{ $mesin->id }}" class="hidden">
                                             <svg class="animate-spin h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24">
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                             </svg>
                                         </div>
+                                        
+                                        <!-- Save Button -->
                                         <button 
                                             onclick="saveTableChanges('{{ $mesin->nama }}', '{{ $currentShift }}', {{ $mesin->id }})"
                                             id="save-btn-{{ $mesin->id }}"
@@ -428,8 +469,36 @@
                                             </svg>
                                             <span>Simpan Perubahan</span>
                                         </button>
+                                        
+                                        <!-- Success Message -->
                                         <div id="save-success-{{ $mesin->id }}" class="hidden text-green-600 text-sm font-medium">
                                             ✓ Disimpan
+                                        </div>
+                                        
+                                        <!-- Submit Button -->
+                                        <button 
+                                            onclick="submitToAndonMesin('{{ $mesin->nama }}', {{ $mesin->id }})"
+                                            id="submit-btn-{{ $mesin->id }}"
+                                            class="submit-btn px-5 py-2.5 rounded-lg font-medium transition flex items-center space-x-2"
+                                            title="Submit data ke halaman Andon Mesin"
+                                        >
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                            <span>Submit ke Andon</span>
+                                        </button>
+                                        
+                                        <!-- Submit Loading -->
+                                        <div id="submit-loading-{{ $mesin->id }}" class="hidden">
+                                            <svg class="animate-spin h-5 w-5 text-purple-600" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                        </div>
+                                        
+                                        <!-- Submit Success -->
+                                        <div id="submit-success-{{ $mesin->id }}" class="hidden text-green-600 text-sm font-medium">
+                                            ✓ Submitted
                                         </div>
                                     </div>
                                 </div>
@@ -612,9 +681,13 @@
                                 </div>
                                 
                                 <!-- Summary Footer -->
-                                <div class="mt-3 flex justify-between items-center text-sm text-gray-600">
+                                <div class="mt-3 flex flex-col md:flex-row justify-between items-start md:items-center text-sm text-gray-600 gap-3">
                                     <div>
-                                        <span class="font-medium">Catatan:</span> Klik "Simpan Perubahan" untuk menerapkan perubahan
+                                        <span class="font-medium">Catatan:</span> 
+                                        <span class="text-gray-500">
+                                            Klik "Simpan Perubahan" untuk menerapkan perubahan, 
+                                            lalu "Submit ke Andon" untuk simpan ke Andon Mesin
+                                        </span>
                                     </div>
                                     <div class="flex items-center space-x-4">
                                         <button 

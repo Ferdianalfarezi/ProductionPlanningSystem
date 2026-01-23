@@ -11,13 +11,11 @@ class PreviewAndonController extends Controller
 {
     public function index(PreviewAndonSyncService $syncService)
     {
-        // Ambil semua mesin
         $mesins = Mesin::orderBy('nama')->get();
         
         $dataByMesin = [];
         
         foreach ($mesins as $mesin) {
-            // Ambil data untuk mesin ini, urutkan berdasarkan shift dan sort_order
             $dataByMesin[$mesin->nama] = PreviewAndon::where('mesin_nama', $mesin->nama)
                 ->orderBy('shift')
                 ->orderBy('sort_order')
@@ -32,26 +30,21 @@ class PreviewAndonController extends Controller
         try {
             $previewAndon = PreviewAndon::findOrFail($id);
             
-            // Jika ada parameter force_active, set langsung ke true
             if ($request->has('force_active') && $request->force_active) {
                 $previewAndon->is_active = true;
             } 
-            // Jika ada parameter force_inactive, set langsung ke false
             else if ($request->has('force_inactive') && $request->force_inactive) {
                 $previewAndon->is_active = false;
             }
-            // Jika ada parameter is_active dari request, gunakan itu
             else if ($request->has('is_active')) {
                 $previewAndon->is_active = $request->is_active;
             }
-            // Default: toggle status
             else {
                 $previewAndon->is_active = !$previewAndon->is_active;
             }
             
             $previewAndon->save();
             
-            // Recalculate schedule setelah toggle
             if ($previewAndon->is_active) {
                 $syncService = new PreviewAndonSyncService();
                 $syncService->recalculateScheduleForMesin($previewAndon->mesin_nama, $previewAndon->shift);
@@ -158,13 +151,11 @@ class PreviewAndonController extends Controller
         ]);
         
         try {
-            // Update semua sort_order
             foreach ($request->order as $index => $id) {
                 PreviewAndon::where('id', $id)
                     ->update(['sort_order' => $index + 1]);
             }
             
-            // Recalculate schedule
             $syncService = new PreviewAndonSyncService();
             $syncService->recalculateScheduleForMesin($request->mesin_nama, $request->shift);
             
@@ -181,7 +172,6 @@ class PreviewAndonController extends Controller
         }
     }
     
-    // Fungsi baru untuk bulk update per tabel
     public function bulkUpdate(Request $request, PreviewAndonSyncService $syncService)
     {
         $request->validate([
@@ -199,12 +189,10 @@ class PreviewAndonController extends Controller
             $mesinNama = $request->mesin_nama;
             $shift = $request->shift;
             
-            // Jika ada update shift
             if ($request->shift_changed) {
                 $count = $syncService->updateShift($mesinNama, $shift);
             }
             
-            // Jika ada update status aktif
             if ($request->has('updates')) {
                 foreach ($request->updates as $update) {
                     $previewAndon = PreviewAndon::where('id', $update['id'])
@@ -218,7 +206,6 @@ class PreviewAndonController extends Controller
                 }
             }
             
-            // Jika ada update urutan
             if ($request->has('sort_order')) {
                 foreach ($request->sort_order as $index => $id) {
                     PreviewAndon::where('id', $id)
@@ -227,10 +214,8 @@ class PreviewAndonController extends Controller
                 }
             }
             
-            // Recalculate schedule untuk mesin ini saja
             $syncService->recalculateScheduleForMesin($mesinNama, $shift);
             
-            // Ambil data terbaru untuk mesin ini saja
             $updatedData = PreviewAndon::where('mesin_nama', $mesinNama)
                 ->where('shift', $shift)
                 ->orderBy('sort_order')
@@ -251,7 +236,6 @@ class PreviewAndonController extends Controller
                     ];
                 });
             
-            // Hitung statistik
             $activeCount = $updatedData->where('is_active', true)->count();
             $inactiveCount = $updatedData->where('is_active', false)->count();
             
@@ -274,53 +258,75 @@ class PreviewAndonController extends Controller
     }
 
     public function getMesinData(Request $request)
-{
-    $request->validate([
-        'mesin' => 'required|string'
-    ]);
-    
-    try {
-        $mesinName = $request->mesin;
-        
-        // Ambil data untuk mesin ini saja
-        $data = PreviewAndon::where('mesin_nama', $mesinName)
-            ->orderBy('shift')
-            ->orderBy('sort_order')
-            ->get()
-            ->map(function($item) {
-                return [
-                    'id' => $item->id,
-                    'part_no' => $item->part_no,
-                    'gsph' => $item->gsph,
-                    'calculated_start' => $item->calculated_start,
-                    'calculated_finish' => $item->calculated_finish,
-                    'plan_qty' => $item->plan_qty,
-                    'actual_qty' => $item->actual_qty,
-                    'efficiency' => $item->efficiency,
-                    'is_active' => $item->is_active,
-                    'sort_order' => $item->sort_order,
-                    'shift' => $item->shift
-                ];
-            });
-        
-        // Hitung statistik
-        $activeCount = $data->where('is_active', true)->count();
-        $inactiveCount = $data->where('is_active', false)->count();
-        
-        return response()->json([
-            'success' => true,
-            'data' => $data,
-            'stats' => [
-                'active' => $activeCount,
-                'inactive' => $inactiveCount
-            ]
+    {
+        $request->validate([
+            'mesin' => 'required|string'
         ]);
         
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Gagal memuat data: ' . $e->getMessage()
-        ], 500);
+        try {
+            $mesinName = $request->mesin;
+            
+            $data = PreviewAndon::where('mesin_nama', $mesinName)
+                ->orderBy('shift')
+                ->orderBy('sort_order')
+                ->get()
+                ->map(function($item) {
+                    return [
+                        'id' => $item->id,
+                        'part_no' => $item->part_no,
+                        'gsph' => $item->gsph,
+                        'calculated_start' => $item->calculated_start,
+                        'calculated_finish' => $item->calculated_finish,
+                        'plan_qty' => $item->plan_qty,
+                        'actual_qty' => $item->actual_qty,
+                        'efficiency' => $item->efficiency,
+                        'is_active' => $item->is_active,
+                        'sort_order' => $item->sort_order,
+                        'shift' => $item->shift
+                    ];
+                });
+            
+            $activeCount = $data->where('is_active', true)->count();
+            $inactiveCount = $data->where('is_active', false)->count();
+            
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+                'stats' => [
+                    'active' => $activeCount,
+                    'inactive' => $inactiveCount
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat data: ' . $e->getMessage()
+            ], 500);
+        }
     }
-}
+    
+    // METHOD SUBMIT KE ANDON MESIN (masih di controller ini)
+    public function submitToAndonMesin(Request $request)
+    {
+        $request->validate([
+            'mesin_id' => 'required|integer|exists:mesin,id',
+            'mesin_nama' => 'required|string',
+            'shift' => 'required|in:1,2',
+            'tanggal' => 'required|date',
+            'data' => 'required|array'
+        ]);
+
+        try {
+            // Panggil method dari AndonMesinController
+            $andonMesinController = new AndonMesinController();
+            return $andonMesinController->store($request);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal submit: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
