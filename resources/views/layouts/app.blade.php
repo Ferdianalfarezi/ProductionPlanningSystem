@@ -418,6 +418,7 @@
         
         <!-- Andon Mesin -->
         <a href="{{ route('andon.mesin') }}"
+        target="_blank"
            class="menu-item flex items-center px-4 py-2 text-sm text-gray-300
                 {{ request()->routeIs('andon.mesin') ? 'active' : '' }}">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

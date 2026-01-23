@@ -1,277 +1,444 @@
-{{-- resources/views/andon/andon-mesin.blade.php --}}
-@extends('layouts.app')
+@extends('layouts.andon')
 
 @section('title', 'Andon Mesin')
+@section('page-title', 'ANDON MESIN LINE 9')
+@section('body-class', 'andon-mesin-page')
 
 @section('content')
+    <!-- Filter & Summary Bar -->
+    <div id="filterBox" class="mt-3 mb-1">
 
-<div class="space-y-8">
-    <!-- Header -->
-    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-900">Andon Mesin</h1>
-            <p class="text-gray-600 mt-2">Data historis produksi yang telah disubmit dari Preview Andon</p>
-        </div>
-        
-        <div class="flex items-center space-x-4">
-            <div class="text-right hidden lg:block">
-                <div class="text-sm text-gray-500">Data Read Only</div>
-                <div class="text-lg font-bold text-gray-700">Tidak bisa diedit</div>
-            </div>
-            <div class="h-10 w-px bg-gray-300 hidden lg:block"></div>
-            <button onclick="exportToExcel()" 
-                    class="export-btn px-6 py-3 rounded-xl font-bold flex items-center space-x-3 shadow-lg bg-green-600 text-white hover:bg-green-700 transition">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                </svg>
-                <span>Export Excel</span>
-            </button>
-        </div>
-    </div>
-    
-    <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="stat-card bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div class="stat-icon bg-gray-100 w-12 h-12 rounded-lg flex items-center justify-center mb-3">
-                <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                </svg>
-            </div>
-            <div class="text-3xl font-bold text-gray-900" id="totalMesin">0</div>
-            <div class="text-sm text-gray-600 mt-1">Total Mesin</div>
-        </div>
-        
-        <div class="stat-card bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div class="stat-icon bg-blue-100 w-12 h-12 rounded-lg flex items-center justify-center mb-3">
-                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-            </div>
-            <div class="text-3xl font-bold text-gray-900" id="totalSubmission">0</div>
-            <div class="text-sm text-gray-600 mt-1">Total Submission</div>
-        </div>
-        
-        <div class="stat-card bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div class="stat-icon bg-green-100 w-12 h-12 rounded-lg flex items-center justify-center mb-3">
-                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                </svg>
-            </div>
-            <div class="text-3xl font-bold text-gray-900" id="totalActive">0</div>
-            <div class="text-sm text-gray-600 mt-1">Data Aktif</div>
-        </div>
-        
-        <div class="stat-card bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div class="stat-icon bg-orange-100 w-12 h-12 rounded-lg flex items-center justify-center mb-3">
-                <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
-            </div>
-            <div class="text-3xl font-bold text-gray-900" id="totalPlan">0</div>
-            <div class="text-sm text-gray-600 mt-1">Total Plan Qty</div>
-        </div>
-    </div>
-    
-    <!-- Filter Section -->
-    <div class="bg-black rounded-2xl p-6 shadow-xl">
-        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-            <div class="flex-1">
-                <h2 class="text-xl font-bold text-white mb-6">Filter Data</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="card border-0 " style="background-color: #000000; border: 2px solid #ffffff;">
+            <div class="card-body py-2 px-4">
+                <div class="d-flex align-items-center justify-content-center gap-3 flex-wrap">
+                    
                     <!-- Filter Mesin -->
-                    <div>
-                        <label class="block text-sm font-medium text-white mb-2">
-                            <div class="flex items-center space-x-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                                </svg>
-                                <span>Mesin</span>
-                            </div>
-                        </label>
-                        <div class="relative">
-                            <select id="filterMesin" class="w-full filter-input rounded-xl px-4 py-3.5 text-gray-900 focus:outline-none">
-                                <option value="">Semua Mesin</option>
-                                @foreach($submittedMesin as $mesin)
-                                    <option value="{{ $mesin->mesin_id }}">{{ $mesin->mesin_nama }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <small class="text-white" style="font-size: 0.9rem;">Mesin:</small>
+                        <select id="filterMesin" class="form-select form-select-sm bg-black text-white border-white" style="width: 180px;">
+                            <option value="">Semua Mesin</option>
+                            @foreach($submittedMesin as $mesin)
+                                <option value="{{ $mesin->mesin_id }}">{{ $mesin->mesin_nama }}</option>
+                            @endforeach
+                        </select>
                     </div>
-                    
+
+                    <div class="vr bg-white" style="height: 30px;"></div>
+
                     <!-- Filter Tanggal -->
-                    <div>
-                        <label class="block text-sm font-medium text-white mb-2">
-                            <div class="flex items-center space-x-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                </svg>
-                                <span>Tanggal Produksi</span>
-                            </div>
-                        </label>
-                        <div class="relative">
-                            <input type="date" id="filterTanggal" 
-                                   class="w-full filter-input rounded-xl px-4 py-3.5 text-gray-900 focus:outline-none"
-                                   value="{{ $defaultDate }}">
-                        </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <small class="text-white" style="font-size: 0.9rem;">Tanggal:</small>
+                        <input type="date" id="filterTanggal" class="form-control form-control-sm bg-black text-white border-white" 
+                               value="{{ $defaultDate }}" style="width: 140px;">
                     </div>
-                    
+
+                    <div class="vr bg-white" style="height: 30px;"></div>
+
                     <!-- Filter Shift -->
-                    <div>
-                        <label class="block text-sm font-medium text-white mb-2">
-                            <div class="flex items-center space-x-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                                <span>Shift</span>
-                            </div>
-                        </label>
-                        <div class="relative">
-                            <select id="filterShift" class="w-full filter-input rounded-xl px-4 py-3.5 text-gray-900 focus:outline-none">
-                                <option value="">Semua Shift</option>
-                                <option value="1">Shift 1 (07:00)</option>
-                                <option value="2">Shift 2 (19:00)</option>
-                            </select>
-                        </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <small class="text-white" style="font-size: 0.9rem;">Shift:</small>
+                        <select id="filterShift" class="form-select form-select-sm bg-black text-white border-white" style="width: 120px;">
+                            <option value="">Semua Shift</option>
+                            <option value="1">Shift 1</option>
+                            <option value="2">Shift 2</option>
+                        </select>
                     </div>
+
+                    <div class="vr bg-white" style="height: 30px;"></div>
+
+                    <!-- Tombol Filter -->
+                    <div class="d-flex align-items-center gap-2">
+                        <button onclick="loadAndonMesinData()" class="btn btn-sm btn-light px-3">
+                            <i class="bi bi-funnel me-1"></i> Filter
+                        </button>
+                        <button onclick="resetFilters()" class="btn btn-sm btn-outline-light px-3">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                    </div>
+
+                    <div class="vr bg-white" style="height: 30px;"></div>
+
+                    {{-- <!-- Export Button -->
+                    <div class="d-flex align-items-center gap-2">
+                        <button onclick="exportToExcel()" class="btn btn-sm btn-light px-3">
+                            <i class="bi bi-file-earmark-excel me-1"></i> Export
+                        </button>
+                    </div> --}}
+
                 </div>
             </div>
-            
-            <!-- Tombol Filter -->
-            <div class="lg:w-auto">
-                <button onclick="loadAndonMesinData()" 
-                        class="bg-white text-dark px-8 py-4 rounded-xl font-bold hover:bg-gray-50 transition-all duration-300 flex items-center space-x-3 shadow-lg hover:shadow-xl w-full lg:w-auto">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
-                    </svg>
-                    <span>TERAPKAN FILTER</span>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingAndonMesin" class="d-none text-center py-5">
+        <div class="d-flex flex-column align-items-center gap-3">
+            <div class="spinner-border text-white" style="width: 3rem; height: 3rem;"></div>
+            <p class="text-white fs-5">Memuat data andon mesin...</p>
+        </div>
+    </div>
+
+    <!-- Results Container -->
+    <div id="andonMesinResults" class="mt-4">
+        <!-- Data akan diisi via JavaScript -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="d-none">
+        <div class="card border-0 bg-black">
+            <div class="card-body text-center py-5" style="border: 2px solid #ffffff;">
+                <i class="bi bi-inbox fs-1 text-white mb-3"></i>
+                <h5 class="text-white mb-2">Data Tidak Ditemukan</h5>
+                <p class="text-white mb-4">Tidak ada data andon mesin untuk filter yang dipilih.</p>
+                <button onclick="resetFilters()" class="btn btn-outline-light btn-sm me-2">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filter
+                </button>
+                <button onclick="setDateFilter('today')" class="btn btn-light btn-sm">
+                    <i class="bi bi-calendar-day me-1"></i> Lihat Hari Ini
                 </button>
             </div>
         </div>
-        
-        <!-- Quick Date Filters -->
-        <div class="mt-6 pt-6 border-t border-white border-opacity-20">
-            <div class="flex flex-wrap gap-3">
-                <span class="text-sm font-medium text-white flex items-center">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
-                    </svg>
-                    Filter Cepat:
-                </span>
-                <button onclick="setDateFilter('today')" class="quick-filter-btn bg-white bg-opacity-10 hover:bg-opacity-20 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-all">Hari Ini</button>
-                <button onclick="setDateFilter('yesterday')" class="quick-filter-btn bg-white bg-opacity-10 hover:bg-opacity-20 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-all">Kemarin</button>
-                <button onclick="setDateFilter('this_week')" class="quick-filter-btn bg-white bg-opacity-10 hover:bg-opacity-20 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-all">Minggu Ini</button>
-                <button onclick="setDateFilter('last_week')" class="quick-filter-btn bg-white bg-opacity-10 hover:bg-opacity-20 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-all">Minggu Lalu</button>
-                <button onclick="setDateFilter('this_month')" class="quick-filter-btn bg-white bg-opacity-10 hover:bg-opacity-20 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-all">Bulan Ini</button>
-                <button onclick="setDateFilter('last_month')" class="quick-filter-btn bg-white bg-opacity-10 hover:bg-opacity-20 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-all">Bulan Lalu</button>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div id="statisticsCards" class="d-none mt-4">
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card border-0 bg-black">
+                    <div class="card-body" style="border: 2px solid #ffffff;">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-white p-2 me-3">
+                                <i class="bi bi-cpu text-black fs-4"></i>
+                            </div>
+                            <div>
+                                <small class="text-white d-block">Total Mesin</small>
+                                <h4 class="mb-0 fw-bold text-white" id="totalMesin">0</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
-    
-    <!-- Loading State -->
-    <div id="loadingAndonMesin" class="hidden text-center py-16">
-        <div class="inline-flex flex-col items-center space-y-6">
-            <div class="relative">
-                <svg class="animate-spin h-16 w-16 text-gray-600" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+            <div class="col-md-3">
+                <div class="card border-0 bg-black">
+                    <div class="card-body" style="border: 2px solid #ffffff;">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-white p-2 me-3">
+                                <i class="bi bi-cloud-upload text-black fs-4"></i>
+                            </div>
+                            <div>
+                                <small class="text-white d-block">Total Submission</small>
+                                <h4 class="mb-0 fw-bold text-white" id="totalSubmission">0</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <p class="text-gray-600 font-medium text-lg">Memuat data andon mesin...</p>
-        </div>
-    </div>
-    
-    <!-- Results Container -->
-    <div id="andonMesinResults" class="space-y-8">
-        <!-- Data akan diisi via JavaScript -->
-    </div>
-    
-    <!-- Empty State -->
-    <div id="emptyState" class="hidden">
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
-            <div class="max-w-md mx-auto">
-                <svg class="w-24 h-24 mx-auto text-gray-300 mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <h3 class="text-2xl font-bold text-gray-900 mb-3">Data Tidak Ditemukan</h3>
-                <p class="text-gray-600 mb-4">Tidak ada data andon mesin untuk filter yang dipilih.</p>
-                <p class="text-gray-500 text-sm mb-8">Coba pilih tanggal lain atau mesin yang berbeda</p>
-                <div class="flex flex-col sm:flex-row gap-3 justify-center">
-                    <button onclick="resetFilters()" class="bg-black text-white px-6 py-3 rounded-xl font-medium hover:bg-gray-800 transition flex items-center justify-center space-x-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                        </svg>
-                        <span>Reset Filter</span>
-                    </button>
-                    <button onclick="setDateFilter('today')" class="bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-xl font-medium hover:bg-gray-50 transition flex items-center justify-center space-x-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                        </svg>
-                        <span>Lihat Hari Ini</span>
-                    </button>
+            <div class="col-md-3">
+                <div class="card border-0 bg-black">
+                    <div class="card-body" style="border: 2px solid #ffffff;">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-white p-2 me-3">
+                                <i class="bi bi-clipboard-data text-black fs-4"></i>
+                            </div>
+                            <div>
+                                <small class="text-white d-block">Total Plan Qty</small>
+                                <h4 class="mb-0 fw-bold text-white" id="totalPlan">0</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 bg-black">
+                    <div class="card-body" style="border: 2px solid #ffffff;">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-white p-2 me-3">
+                                <i class="bi bi-graph-up text-black fs-4"></i>
+                            </div>
+                            <div>
+                                <small class="text-white d-block">Total Actual Qty</small>
+                                <h4 class="mb-0 fw-bold text-white" id="totalActual">0</h4>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+@endsection
 
+@push('styles')
 <style>
-    .filter-input { background: white; border: 1px solid #e5e7eb; }
-    .shift-badge { padding: 4px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
-    .shift-1 { background-color: #dbeafe; color: #1e40af; }
-    .shift-2 { background-color: #e5e7eb; color: #1f2937; }
-    .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
-    .status-active { background-color: #d1fae5; color: #065f46; }
-    .status-inactive { background-color: #f3f4f6; color: #6b7280; }
-    .efficiency-badge { padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; }
-    .eff-high { background-color: #d1fae5; color: #065f46; }
-    .eff-medium { background-color: #fef3c7; color: #92400e; }
-    .eff-low { background-color: #fee2e2; color: #991b1b; }
-    .eff-none { background-color: #f3f4f6; color: #6b7280; }
-    .scrollable-table { overflow-x: auto; }
-    .scrollable-table::-webkit-scrollbar { height: 6px; }
-    .scrollable-table::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
-    .scrollable-table::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
-    .mesin-header { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1px solid #e2e8f0; }
-    .actual-time { color: #059669; font-weight: 500; font-size: 0.75rem; }
-    .compact-cell { padding: 10px 12px !important; font-size: 0.875rem !important; }
-    .inactive-row { background-color: #f9fafb !important; }
-    .inactive-row td { color: #9ca3af !important; }
+    .andon-mesin-page .card {
+        border-radius: 0;
+    }
     
-    /* Alignment untuk th dan td */
-    .th-center { text-align: center !important; }
-    .td-center { text-align: center !important; }
-    .th-left { text-align: left !important; }
-    .td-left { text-align: left !important; }
-    .th-right { text-align: right !important; }
-    .td-right { text-align: right !important; }
+    .mesin-header {
+        background: #000000;
+        border-bottom: 2px solid #ffffff;
+        padding: 12px 20px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: white;
+    }
     
-    /* Warna untuk header kolom */
-    .th-green { color: #059669 !important; }
-    .td-green { color: #059669 !important; }
-    .th-gray { color: #4b5563 !important; }
-    .td-gray { color: #4b5563 !important; }
+    .table-compact th,
+    .table-compact td {
+        padding: 8px 10px;
+        font-size: 0.875rem;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
     
-    /* Styling untuk data kosong */
-    .empty-data { color: #9ca3af; font-style: italic; }
+    .table-compact thead th {
+        background-color: #000000;
+        color: #ffffff;
+        font-weight: 600;
+        text-align: center;
+        border: 1px solid #ffffff;
+    }
     
-    /* Styling untuk font dan angka */
-    .font-numeric { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
-    .text-right-num { text-align: right; }
+    .efficiency-badge {
+        padding: 3px 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        min-width: 50px;
+        text-align: center;
+        display: inline-block;
+    }
+    
+    .eff-high {
+        background-color: #32cb0c;
+        color: #ffffff;
+        border: 1px solid #32cb0c;
+    }
+    
+    .eff-medium {
+        background-color: #ffffff;
+        color: #000000;
+        border: 1px solid #ffffff;
+    }
+    
+    .eff-low {
+        background-color: #ff0000;
+        color: #ffffff;
+        border: 1px solid #fe0202;
+    }
+    
+    .eff-none {
+        background-color: #666666;
+        color: #ffffff;
+        border: 1px solid #666666;
+    }
+    
+    .time-cell {
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-align: center;
+    }
+    
+    .time-actual {
+        color: #ffffff;
+        font-weight: 600;
+    }
+    
+    .time-plan {
+        color: #cccccc;
+    }
+    
+    .quantity-cell {
+        text-align: right;
+        font-family: 'Courier New', monospace;
+        font-weight: 600;
+    }
+    
+    .quantity-actual {
+        color: #ffffff;
+    }
+    
+    .quantity-plan {
+        color: #cccccc;
+    }
+    
+    .inactive-row {
+        background-color: #222222;
+    }
+    
+    .inactive-row td {
+        color: #999999 !important;
+    }
+    
+    .scrollable-table {
+        overflow-x: auto;
+        border: 2px solid #ffffff;
+        margin-bottom: 0;
+    }
+    
+    .mesin-card {
+        border: 2px solid #ffffff;
+        margin-bottom: 1.5rem;
+        background: #000000;
+    }
+    
+    .mesin-title {
+        background: #000000;
+        color: white;
+        padding: 12px 20px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #ffffff;
+    }
+    
+    .mesin-subtitle {
+        font-size: 0.8rem;
+        color: #cccccc;
+        font-weight: normal;
+    }
+    
+    .horizontal-shifts {
+        display: flex;
+        gap: 20px;
+    }
+    
+    .shift-column {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    @media (max-width: 1200px) {
+        .horizontal-shifts {
+            flex-direction: column;
+        }
+    }
+    
+    /* Table styling */
+    .table-dark {
+        --bs-table-bg: #000000;
+        --bs-table-striped-bg: #222222;
+        --bs-table-striped-color: #ffffff;
+        --bs-table-active-bg: #333333;
+        --bs-table-active-color: #ffffff;
+        --bs-table-hover-bg: #333333;
+        --bs-table-hover-color: #ffffff;
+        color: #ffffff;
+        border-color: #ffffff;
+    }
+    
+    .table-dark tbody, 
+    .table-dark td, 
+    .table-dark th, 
+    .table-dark thead, 
+    .table-dark tr {
+        border-color: #ffffff;
+    }
+    
+    .table-active {
+        --bs-table-bg: #222222;
+        --bs-table-color: #ffffff;
+    }
+    
+    /* Button styling */
+    .btn-light {
+        background-color: #ffffff;
+        color: #000000;
+        border: 1px solid #ffffff;
+    }
+    
+    .btn-outline-light {
+        color: #ffffff;
+        border-color: #ffffff;
+    }
+    
+    .btn-outline-light:hover {
+        background-color: #ffffff;
+        color: #000000;
+    }
+    
+    /* Form control styling */
+    .form-control, .form-select {
+        border: 1px solid #ffffff;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        background-color: #000000;
+        color: #ffffff;
+        border-color: #ffffff;
+        box-shadow: none;
+    }
+    
+    /* Badge styling */
+    .badge {
+        border-radius: 0;
+    }
+    
+    .badge.bg-primary {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 1px solid #ffffff;
+    }
+    
+    /* Column widths */
+    .col-urutan {
+        width: 60px;
+        min-width: 60px;
+    }
+    
+    .col-partno {
+        width: 120px;
+        min-width: 120px;
+    }
+    
+    .col-gsph {
+        width: 80px;
+        min-width: 80px;
+    }
+    
+    .col-time {
+        width: 90px;
+        min-width: 90px;
+    }
+    
+    .col-qty {
+        width: 100px;
+        min-width: 100px;
+    }
+    
+    .col-eff {
+        width: 70px;
+        min-width: 70px;
+    }
+    
+    /* Alignment */
+    .text-start {
+        text-align: left !important;
+    }
+    
+    .text-end {
+        text-align: right !important;
+    }
+    
+    .text-center {
+        text-align: center !important;
+    }
 </style>
+@endpush
 
+@push('scripts')
 <script>
 let currentData = [];
 let currentFilters = {};
 
 // ==================== FUNGSI HELPER ====================
 function formatNumber(num) {
-    if (!num && num !== 0) return '<span class="empty-data">-</span>';
+    if (!num && num !== 0) return '<span class="text-white-50">-</span>';
     return new Intl.NumberFormat('id-ID').format(num);
 }
 
 function formatDate(dateString) {
-    if (!dateString) return '<span class="empty-data">-</span>';
+    if (!dateString) return '<span class="text-white-50">-</span>';
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return dateString;
     return date.toLocaleDateString('id-ID', { 
@@ -283,7 +450,7 @@ function formatDate(dateString) {
 }
 
 function formatDateTime(dateTimeString) {
-    if (!dateTimeString || dateTimeString === '-') return '<span class="empty-data">-</span>';
+    if (!dateTimeString || dateTimeString === '-') return '<span class="text-white-50">-</span>';
     const date = new Date(dateTimeString);
     if (isNaN(date.getTime())) return dateTimeString;
     return date.toLocaleString('id-ID', { 
@@ -295,10 +462,8 @@ function formatDateTime(dateTimeString) {
 }
 
 function formatTime(timeString) {
-    if (!timeString || timeString === '-') return '<span class="empty-data">-</span>';
-    // Jika sudah format HH:mm, langsung return
+    if (!timeString || timeString === '-') return '<span class="text-white-50">-</span>';
     if (timeString.match(/^\d{2}:\d{2}$/)) return timeString;
-    // Jika datetime, parse dan format
     const date = new Date(timeString);
     if (isNaN(date.getTime())) return timeString;
     return date.toLocaleString('id-ID', { 
@@ -316,7 +481,7 @@ function getEfficiencyClass(efficiency) {
 }
 
 function formatDecimal(value, decimals = 1) {
-    if (!value && value !== 0) return '<span class="empty-data">-</span>';
+    if (!value && value !== 0) return '<span class="text-white-50">-</span>';
     return parseFloat(value).toFixed(decimals);
 }
 
@@ -325,10 +490,12 @@ async function loadAndonMesinData() {
     const loadingEl = document.getElementById('loadingAndonMesin');
     const resultsEl = document.getElementById('andonMesinResults');
     const emptyEl = document.getElementById('emptyState');
+    const statsEl = document.getElementById('statisticsCards');
     
-    loadingEl.classList.remove('hidden');
+    loadingEl.classList.remove('d-none');
     resultsEl.innerHTML = '';
-    emptyEl.classList.add('hidden');
+    emptyEl.classList.add('d-none');
+    statsEl.classList.add('d-none');
     
     const params = new URLSearchParams({
         mesin_id: document.getElementById('filterMesin').value,
@@ -343,13 +510,15 @@ async function loadAndonMesinData() {
         if (result.success) {
             currentData = result.data;
             currentFilters = result.filters;
-            updateStatistics(result.statistics);
             
             if (currentData.length > 0) {
+                updateStatistics(result.statistics);
+                statsEl.classList.remove('d-none');
                 renderAndonMesinData(currentData);
-                emptyEl.classList.add('hidden');
+                emptyEl.classList.add('d-none');
             } else {
-                emptyEl.classList.remove('hidden');
+                emptyEl.classList.remove('d-none');
+                statsEl.classList.add('d-none');
             }
         } else {
             throw new Error(result.message || 'Gagal memuat data');
@@ -358,16 +527,26 @@ async function loadAndonMesinData() {
         console.error('Error loading andon mesin data:', error);
         showError('Gagal memuat data: ' + error.message);
     } finally {
-        loadingEl.classList.add('hidden');
+        loadingEl.classList.add('d-none');
     }
 }
 
 function updateStatistics(stats) {
     document.getElementById('totalSubmission').textContent = formatNumber(stats.total_submissions || 0);
-    document.getElementById('totalActive').textContent = formatNumber(stats.active_rows || 0);
     document.getElementById('totalPlan').textContent = formatNumber(stats.total_rows || 0);
-    const uniqueMesins = new Set(currentData.map(item => item.mesin_id));
-    document.getElementById('totalMesin').textContent = uniqueMesins.size;
+    
+    let totalActual = 0;
+    let totalMesin = new Set();
+    
+    currentData.forEach(item => {
+        totalMesin.add(item.mesin_id);
+        (item.data_json || []).forEach(row => {
+            totalActual += row.actual_qty || 0;
+        });
+    });
+    
+    document.getElementById('totalActual').textContent = formatNumber(totalActual);
+    document.getElementById('totalMesin').textContent = totalMesin.size;
 }
 
 // ==================== FUNGSI RENDER DATA ====================
@@ -375,31 +554,27 @@ function renderAndonMesinData(data) {
     const container = document.getElementById('andonMesinResults');
     container.innerHTML = '';
     
-    if (!currentFilters.selected_mesin) {
-        // Group by mesin
-        const groupedData = {};
-        data.forEach(item => {
-            const key = item.mesin_nama;
-            if (!groupedData[key]) groupedData[key] = [];
-            groupedData[key].push(item);
-        });
-        
-        Object.entries(groupedData).forEach(([mesinName, items]) => {
-            const card = createMesinCard(mesinName, items);
-            container.appendChild(card);
-        });
-    } else {
-        // Single mesin
-        const mesinName = data[0]?.mesin_nama || 'Mesin';
-        const card = createMesinCard(mesinName, data);
+    // Group by mesin
+    const groupedData = {};
+    data.forEach(item => {
+        const key = item.mesin_id;
+        if (!groupedData[key]) groupedData[key] = [];
+        groupedData[key].push(item);
+    });
+    
+    // Render setiap mesin
+    Object.entries(groupedData).forEach(([mesinId, items]) => {
+        const mesinName = items[0]?.mesin_nama || 'Mesin';
+        const card = createMesinCard(mesinName, items);
         container.appendChild(card);
-    }
+    });
 }
 
 function createMesinCard(mesinName, items) {
     const card = document.createElement('div');
-    card.className = 'data-card bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden';
+    card.className = 'mesin-card';
     
+    // Hitung statistik
     let totalRows = 0, activeRows = 0, totalPlan = 0, totalActual = 0, totalEfficiency = 0;
     let hasShifts = new Set();
     
@@ -418,49 +593,63 @@ function createMesinCard(mesinName, items) {
     const avgEfficiency = totalRows > 0 ? (totalEfficiency / totalRows).toFixed(1) : 0;
     const efficiencyClass = getEfficiencyClass(avgEfficiency);
     
+    // Pisahkan data berdasarkan shift
+    const shift1Data = items.filter(item => item.shift === '1');
+    const shift2Data = items.filter(item => item.shift === '2');
+    
     card.innerHTML = `
-        <div class="mesin-header p-5">
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div class="flex items-center space-x-4">
-                    <div class="bg-gray-200 p-3 rounded-xl">
-                        <svg class="w-7 h-7 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                        </svg>
-                    </div>
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-900">${mesinName}</h2>
-                        <div class="flex flex-wrap items-center gap-2 mt-1 text-xs">
-                            <span class="text-gray-600"><span class="font-semibold">${items.length}</span> submission</span>
-                            <span class="h-3 w-px bg-gray-300"></span>
-                            <span class="text-gray-600">Shift: <span class="font-semibold">${Array.from(hasShifts).sort().join(', ')}</span></span>
-                            <span class="h-3 w-px bg-gray-300"></span>
-                            <span class="text-green-600">Aktif: <span class="font-semibold">${activeRows}</span>/${totalRows}</span>
-                            <span class="h-3 w-px bg-gray-300"></span>
-                            <span class="efficiency-badge ${efficiencyClass}">Avg: ${avgEfficiency}%</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="text-right text-sm">
-                    <div class="text-gray-500">Submitted</div>
-                    <div class="font-bold text-gray-900">${items[0]?.submitted_date || '<span class="empty-data">-</span>'}</div>
-                    <div class="text-gray-600">${items[0]?.submitted_time || '<span class="empty-data">-</span>'}</div>
-                </div>
+        <div class="mesin-title">
+            <div>
+                <span>${mesinName}</span>
+                <span class="mesin-subtitle">
+                    ${items.length} submission | 
+                    Shift: ${Array.from(hasShifts).sort().join(', ')} | 
+                    Rows: ${totalRows} | 
+                    <span class="efficiency-badge ${efficiencyClass}">Avg: ${avgEfficiency}%</span>
+                </span>
+            </div>
+            <div class="text-end">
+                <small class="d-block">Submitted</small>
+                <small>${items[0]?.submitted_date || '-'} ${items[0]?.submitted_time || ''}</small>
             </div>
         </div>
         <div class="p-4">
-            ${items.map(item => createSubmissionTable(item)).join('')}
+            <div class="horizontal-shifts">
+                ${createShiftColumn('1', shift1Data)}
+                ${createShiftColumn('2', shift2Data)}
+            </div>
         </div>
     `;
     
     return card;
 }
 
-function createSubmissionTable(submission) {
-    const shiftText = submission.shift === '1' ? 'Shift 1 (07:00)' : 'Shift 2 (19:00)';
-    const submittedAt = formatDateTime(submission.submitted_at);
+function createShiftColumn(shiftNumber, shiftData) {
+    if (shiftData.length === 0) {
+        return `
+            <div class="shift-column">
+                <div class="p-3 mb-3 text-center" style="border: 2px solid #ffffff; background: #000000;">
+                    <h5 class="mb-0 text-white">Shift ${shiftNumber}</h5>
+                    <small class="text-white">Tidak ada data</small>
+                </div>
+            </div>
+        `;
+    }
     
-    // Hitung total
+    let columnHTML = `<div class="shift-column">`;
+    
+    shiftData.forEach((submission, index) => {
+        columnHTML += createSubmissionTable(submission, index);
+    });
+    
+    columnHTML += `</div>`;
+    return columnHTML;
+}
+
+function createSubmissionTable(submission, index) {
+    const submittedAt = formatDateTime(submission.submitted_at);
     let totalPlan = 0, totalActual = 0, totalEfficiency = 0, countEfficiency = 0;
+    
     (submission.data_json || []).forEach(row => {
         totalPlan += row.plan_qty || 0;
         totalActual += row.actual_qty || 0;
@@ -471,103 +660,87 @@ function createSubmissionTable(submission) {
     });
     
     const avgEfficiency = countEfficiency > 0 ? (totalEfficiency / countEfficiency).toFixed(0) : 0;
+    const totalGSPH = submission.data_json?.length > 0 ? 
+        (submission.data_json.reduce((sum, row) => sum + (parseFloat(row.gsph) || 0), 0)) / submission.data_json.length : 0;
     
     return `
-        <div class="mb-6 last:mb-0">
-            <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center space-x-3">
-                    <span class="shift-badge shift-${submission.shift}">${shiftText}</span>
-                    <span class="text-xs text-gray-600">Tanggal: <span class="font-semibold">${formatDate(submission.tanggal)}</span></span>
+        <div class="mb-4 ${index > 0 ? 'mt-4' : ''}">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-primary">Shift ${submission.shift}</span>
+                    <small class="text-white">Tanggal: ${formatDate(submission.tanggal)}</small>
                 </div>
-                <div class="text-xs text-gray-500">Submitted: ${submittedAt}</div>
+                <small class="text-white">${submittedAt}</small>
             </div>
             
-            <div class="scrollable-table border border-gray-200 rounded-lg overflow-hidden">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
+            <div class="scrollable-table">
+                <table class="table table-dark table-compact mb-0">
+                    <thead>
                         <tr>
-                            <th class="compact-cell th-center th-gray">St</th>
-                            <th class="compact-cell th-center th-gray">Urutan</th>
-                            <th class="compact-cell th-left th-gray">Part No</th>
-                            <th class="compact-cell th-right th-gray">GSPH</th>
-                            <th class="compact-cell th-center th-gray">Start Plan</th>
-                            <th class="compact-cell th-center th-green">Start Act</th>
-                            <th class="compact-cell th-center th-gray">Finish Plan</th>
-                            <th class="compact-cell th-center th-green">Finish Act</th>
-                            <th class="compact-cell th-right th-gray">Plan</th>
-                            <th class="compact-cell th-right th-gray">Actual</th>
-                            <th class="compact-cell th-center th-gray">Eff</th>
+                            <th class="text-center col-urutan">No</th>
+                            <th class="text-start col-partno">Part No</th>
+                            <th class="text-end col-gsph">GSPH</th>
+                            <th class="text-center col-time">Start Plan</th>
+                            <th class="text-center col-time">Start Act</th>
+                            <th class="text-center col-time">Finish Plan</th>
+                            <th class="text-center col-time">Finish Act</th>
+                            <th class="text-end col-qty">Plan</th>
+                            <th class="text-end col-qty">Actual</th>
+                            <th class="text-center col-eff">Eff</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        ${(submission.data_json || []).map((row, index) => `
-                            <tr class="hover:bg-gray-50 transition ${!row.is_active ? 'inactive-row' : ''}">
-                                <td class="compact-cell td-center">
-                                    <span class="status-badge ${row.is_active ? 'status-active' : 'status-inactive'}">
-                                        ${row.is_active ? '✓' : '✗'}
+                    <tbody>
+                        ${(submission.data_json || []).map((row, idx) => `
+                            <tr class="${!row.is_active ? 'inactive-row' : ''}">
+                                <td class="text-center">
+                                    <span class="badge bg-secondary">
+                                        ${row.sort_order || (idx + 1)}
                                     </span>
                                 </td>
-                                <td class="compact-cell td-center">
-                                    <span class="text-xs font-medium ${row.is_active ? 'text-gray-900' : 'text-gray-500'} bg-gray-100 px-2 py-1 rounded">
-                                        ${row.sort_order || (index + 1)}
-                                    </span>
+                                <td class="text-start fw-medium text-white">
+                                    ${row.part_no || '<span class="text-white-50">-</span>'}
                                 </td>
-                                <td class="compact-cell td-left font-semibold ${row.is_active ? 'text-gray-900' : 'text-gray-500'}">
-                                    ${row.part_no || '<span class="empty-data">-</span>'}
+                                <td class="quantity-cell text-white">
+                                    ${row.gsph ? formatDecimal(row.gsph, 1) : '<span class="text-white-50">-</span>'}
                                 </td>
-                                <td class="compact-cell td-right font-numeric ${row.is_active ? 'text-gray-600' : 'text-gray-400'}">
-                                    ${row.gsph ? formatDecimal(row.gsph, 1) : '<span class="empty-data">-</span>'}
+                                <td class="time-cell time-plan">
+                                    ${row.start_time || '<span class="text-white-50">-</span>'}
                                 </td>
-                                <td class="compact-cell td-center ${row.is_active ? 'text-gray-600' : 'text-gray-400'}">
-                                    ${row.start_time || '<span class="empty-data">-</span>'}
+                                <td class="time-cell time-actual text-white">
+                                    ${row.start_actual ? formatTime(row.start_actual) : '<span class="text-white-50">-</span>'}
                                 </td>
-                                <td class="compact-cell td-center">
-                                    ${row.start_actual ? 
-                                        `<span class="actual-time ${row.is_active ? '' : 'text-gray-400'}">${formatTime(row.start_actual)}</span>` : 
-                                        '<span class="empty-data">-</span>'
-                                    }
+                                <td class="time-cell time-plan">
+                                    ${row.finish_time || '<span class="text-white-50">-</span>'}
                                 </td>
-                                <td class="compact-cell td-center ${row.is_active ? 'text-gray-600' : 'text-gray-400'}">
-                                    ${row.finish_time || '<span class="empty-data">-</span>'}
+                                <td class="time-cell time-actual text-white">
+                                    ${row.finish_actual ? formatTime(row.finish_actual) : '<span class="text-white-50">-</span>'}
                                 </td>
-                                <td class="compact-cell td-center">
-                                    ${row.finish_actual ? 
-                                        `<span class="actual-time ${row.is_active ? '' : 'text-gray-400'}">${formatTime(row.finish_actual)}</span>` : 
-                                        '<span class="empty-data">-</span>'
-                                    }
-                                </td>
-                                <td class="compact-cell td-right font-semibold font-numeric ${row.is_active ? 'text-gray-900' : 'text-gray-500'}">
+                                <td class="quantity-cell quantity-plan">
                                     ${formatNumber(row.plan_qty)}
                                 </td>
-                                <td class="compact-cell td-right font-numeric">
-                                    ${row.actual_qty > 0 ? 
-                                        `<span class="font-bold ${row.is_active ? 'text-green-600' : 'text-gray-400'}">${formatNumber(row.actual_qty)}</span>` :
-                                        '<span class="empty-data">-</span>'
-                                    }
+                                <td class="quantity-cell quantity-actual text-white">
+                                    ${row.actual_qty > 0 ? formatNumber(row.actual_qty) : '<span class="text-white-50">-</span>'}
                                 </td>
-                                <td class="compact-cell td-center">
+                                <td class="text-center">
                                     <span class="efficiency-badge ${getEfficiencyClass(row.efficiency)}">
-                                        ${row.efficiency ? row.efficiency.toFixed(0) + '%' : '<span class="empty-data">-</span>'}
+                                        ${row.efficiency ? row.efficiency.toFixed(0) + '%' : '<span class="text-white-50">-</span>'}
                                     </span>
                                 </td>
                             </tr>
                         `).join('')}
                     </tbody>
-                    <tfoot class="bg-gray-50 border-t border-gray-200">
-                        <tr>
-                            <td class="compact-cell td-center font-semibold text-gray-700" colspan="3">Total</td>
-                            <td class="compact-cell td-right font-numeric text-gray-600">
-                                ${submission.data_json?.length > 0 ? 
-                                    formatDecimal((submission.data_json.reduce((sum, row) => sum + (parseFloat(row.gsph) || 0), 0)) / submission.data_json.length, 1) : 
-                                    '<span class="empty-data">-</span>'
-                                }
+                    <tfoot>
+                        <tr class="table-active">
+                            <td class="text-start fw-bold text-white" colspan="2">Total</td>
+                            <td class="quantity-cell text-white">
+                                ${formatDecimal(totalGSPH, 1)}
                             </td>
-                            <td class="compact-cell" colspan="4"></td>
-                            <td class="compact-cell td-right font-bold font-numeric text-gray-900">${formatNumber(totalPlan)}</td>
-                            <td class="compact-cell td-right font-bold font-numeric text-green-600">${formatNumber(totalActual)}</td>
-                            <td class="compact-cell td-center">
+                            <td colspan="4"></td>
+                            <td class="quantity-cell fw-bold text-white">${formatNumber(totalPlan)}</td>
+                            <td class="quantity-cell fw-bold text-white">${formatNumber(totalActual)}</td>
+                            <td class="text-center">
                                 <span class="efficiency-badge ${getEfficiencyClass(avgEfficiency)}">
-                                    ${avgEfficiency > 0 ? avgEfficiency + '%' : '<span class="empty-data">-</span>'}
+                                    ${avgEfficiency > 0 ? avgEfficiency + '%' : '<span class="text-white-50">-</span>'}
                                 </span>
                             </td>
                         </tr>
@@ -575,11 +748,11 @@ function createSubmissionTable(submission) {
                 </table>
             </div>
             
-            <div class="mt-2 flex justify-between items-center text-xs text-gray-500">
-                <div>Total: <span class="font-semibold">${submission.data_json?.length || 0}</span> data</div>
+            <div class="d-flex justify-content-between mt-2 text-white small">
+                <div>Total: ${submission.data_json?.length || 0} data</div>
                 <div>
-                    <span class="mr-3">Struk: <span class="font-semibold">${submission.mesin_info?.struk || '<span class="empty-data">-</span>'}</span></span>
-                    <span>Tonase: <span class="font-semibold">${submission.mesin_info?.tonase || '<span class="empty-data">-</span>'}</span></span>
+                    Struk: ${submission.mesin_info?.struk || '-'} | 
+                    Tonase: ${submission.mesin_info?.tonase || '-'}
                 </div>
             </div>
         </div>
@@ -610,13 +783,6 @@ function setDateFilter(type) {
             lastWeek.setDate(today.getDate() - 7 - today.getDay());
             dateInput.value = lastWeek.toISOString().split('T')[0]; 
             break;
-        case 'this_month':
-            dateInput.value = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-01'; 
-            break;
-        case 'last_month':
-            const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-            dateInput.value = lastMonth.getFullYear() + '-' + String(lastMonth.getMonth() + 1).padStart(2, '0') + '-01'; 
-            break;
     }
     loadAndonMesinData();
 }
@@ -631,9 +797,6 @@ function resetFilters() {
 // ==================== EVENT LISTENERS ====================
 document.addEventListener('DOMContentLoaded', function() {
     loadAndonMesinData();
-    document.getElementById('filterTanggal').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') loadAndonMesinData();
-    });
 });
 
 // ==================== FUNGSI UTILITY ====================
@@ -646,30 +809,26 @@ function exportToExcel() {
 }
 
 function showError(message) {
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({ 
-            icon: 'error', 
-            title: 'Error!', 
-            text: message, 
-            confirmButtonColor: '#1f2937' 
-        });
-    } else {
-        alert('Error: ' + message);
-    }
+    Swal.fire({ 
+        icon: 'error', 
+        title: 'Error!', 
+        text: message, 
+        confirmButtonColor: '#000000',
+        background: '#000000',
+        color: '#ffffff'
+    });
 }
 
 function showSuccess(message) {
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({ 
-            icon: 'success', 
-            title: 'Berhasil!', 
-            text: message, 
-            confirmButtonColor: '#1f2937', 
-            timer: 1500 
-        });
-    } else {
-        alert('Success: ' + message);
-    }
+    Swal.fire({ 
+        icon: 'success', 
+        title: 'Berhasil!', 
+        text: message, 
+        confirmButtonColor: '#000000',
+        background: '#000000',
+        color: '#ffffff',
+        timer: 1500 
+    });
 }
 </script>
-@endsection
+@endpush

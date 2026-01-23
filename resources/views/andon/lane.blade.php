@@ -1,7 +1,7 @@
 @extends('layouts.andon')
 
 @section('title', 'Andon - Lane 9 Monitoring')
-@section('page-title', 'LANE 9 MONITORING')
+@section('page-title', 'LINE 9 MONITORING')
 @section('body-class', 'andon-page')
 
 @section('content')
@@ -183,7 +183,8 @@
                         <td>{{ $lane['shift'] }}</td>
                         <td>{{ number_format($lane['gsph_avg'], 1) }}</td>
                         <td>{{ number_format($lane['planning_all']) }}</td>
-                        <td>{{ number_format($lane['plan_hours']) }}</td>
+                        <td>{{ number_format(abs($lane['plan_hours'])) }}</td>
+
                         <td><strong>{{ number_format($lane['actual']) }}</strong></td>
                         
                         <td>
