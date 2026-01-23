@@ -1,10 +1,11 @@
-// Drag & Drop functionality for reordering
+// Drag & Drop functionality for reordering - Compatible with Local Changes System
 
 class DragDropManager {
     constructor() {
         this.draggedItem = null;
         this.dragOverItem = null;
         this.mesinNama = null;
+        this.mesinId = null;
         this.shift = null;
         this.dragStartY = 0;
         this.isDragging = false;
@@ -29,18 +30,17 @@ class DragDropManager {
         document.addEventListener('touchend', this.handleTouchEnd.bind(this));
         
         // Prevent default drag behavior
-        document.addEventListener('dragstart', (e) => e.preventDefault());
+        document.addEventListener('dragstart', (e) => {
+            if (e.target.closest('.drag-handle')) {
+                e.preventDefault();
+            }
+        });
     }
     
     setupSortableRows() {
         const rows = document.querySelectorAll('.sortable-row');
         rows.forEach(row => {
-            row.addEventListener('dragstart', this.handleDragStart.bind(this));
-            row.addEventListener('dragover', this.handleDragOver.bind(this));
-            row.addEventListener('dragenter', this.handleDragEnter.bind(this));
-            row.addEventListener('dragleave', this.handleDragLeave.bind(this));
-            row.addEventListener('drop', this.handleDrop.bind(this));
-            row.addEventListener('dragend', this.handleDragEnd.bind(this));
+            row.setAttribute('draggable', 'false'); // Disable native drag
         });
     }
     
@@ -102,136 +102,77 @@ class DragDropManager {
         this.isDragging = false;
     }
     
-    // HTML5 Drag & Drop events
-    handleDragStart(e) {
-        const row = e.target.closest('.sortable-row');
-        if (!row) return;
-        
-        this.startDrag(row, e.clientY);
-        e.dataTransfer.setData('text/plain', row.dataset.id);
-        e.dataTransfer.effectAllowed = 'move';
-        
-        // Create ghost image
-        setTimeout(() => {
-            row.classList.add('dragging');
-        }, 0);
-    }
-    
-    handleDragOver(e) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        
-        const row = this.getRowFromPoint(e.clientX, e.clientY);
-        if (row && row !== this.draggedItem) {
-            this.dragOverItem = row;
-            this.updateDragOverUI(row, e.clientY);
-        }
-    }
-    
-    handleDragEnter(e) {
-        e.preventDefault();
-        const row = this.getRowFromPoint(e.clientX, e.clientY);
-        if (row && row !== this.draggedItem) {
-            row.classList.add('drag-over');
-        }
-    }
-    
-    handleDragLeave(e) {
-        const row = this.getRowFromPoint(e.clientX, e.clientY);
-        if (row) {
-            row.classList.remove('drag-over');
-        }
-    }
-    
-    async handleDrop(e) {
-        e.preventDefault();
-        
-        if (!this.draggedItem || !this.dragOverItem) return;
-        
-        const draggedId = this.draggedItem.dataset.id;
-        const targetId = this.dragOverItem.dataset.id;
-        
-        // Swap positions in UI
-        await this.swapRows(this.draggedItem, this.dragOverItem);
-        
-        // Clean up
-        this.cleanupDragUI();
-    }
-    
-    handleDragEnd() {
-        this.cleanupDragUI();
-    }
-    
     // Core drag methods
     startDrag(row, clientY) {
         this.draggedItem = row;
         this.dragStartY = clientY;
+        this.initialTop = row.getBoundingClientRect().top;
         
         // Get mesin and shift info
         const container = row.closest('.sortable-container');
+        const mesinContainer = row.closest('.mesin-container');
         this.mesinNama = container?.dataset.mesin;
         this.shift = container?.dataset.shift;
+        this.mesinId = mesinContainer?.dataset.mesinId;
+        
+        // Add dragging class
+        row.classList.add('dragging');
         
         // Create ghost element
-        this.createGhostElement(row);
+        this.createGhostElement(row, clientY);
     }
     
-    createGhostElement(row) {
+    createGhostElement(row, clientY) {
         this.ghostElement = row.cloneNode(true);
         this.ghostElement.classList.add('sortable-ghost');
-        this.ghostElement.style.position = 'absolute';
-        this.ghostElement.style.zIndex = '1000';
-        this.ghostElement.style.opacity = '0.7';
-        this.ghostElement.style.pointerEvents = 'none';
-        this.ghostElement.style.width = `${row.offsetWidth}px`;
-        this.ghostElement.style.height = `${row.offsetHeight}px`;
+        this.ghostElement.classList.remove('dragging');
+        this.ghostElement.style.cssText = `
+            position: fixed;
+            z-index: 1000;
+            opacity: 0.8;
+            pointer-events: none;
+            width: ${row.offsetWidth}px;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 4px;
+        `;
         
-        // Position initially at row location
+        // Position at row location
         const rect = row.getBoundingClientRect();
         this.ghostElement.style.left = `${rect.left}px`;
         this.ghostElement.style.top = `${rect.top}px`;
         
         document.body.appendChild(this.ghostElement);
-        row.classList.add('dragging');
     }
     
     updateDragPosition(clientY) {
-        if (!this.ghostElement) return;
+        if (!this.ghostElement || !this.draggedItem) return;
         
         // Update ghost position
         const deltaY = clientY - this.dragStartY;
-        const rect = this.draggedItem.getBoundingClientRect();
-        this.ghostElement.style.top = `${rect.top + deltaY}px`;
+        this.ghostElement.style.top = `${this.initialTop + deltaY}px`;
         
         // Find drop target
-        const row = this.getRowFromPoint(rect.left + 50, clientY);
-        if (row && row !== this.draggedItem && !row.classList.contains('dragging')) {
-            this.dragOverItem = row;
-            this.updateDragOverUI(row, clientY);
-        }
-    }
-    
-    updateDragOverUI(row, clientY) {
+        const tbody = this.draggedItem.closest('tbody');
+        const rows = Array.from(tbody.querySelectorAll('.sortable-row:not(.dragging)'));
+        
         // Remove all drag-over classes
-        document.querySelectorAll('.drag-over').forEach(el => {
-            el.classList.remove('drag-over');
-        });
+        rows.forEach(r => r.classList.remove('drag-over'));
         
-        // Add to current target
-        row.classList.add('drag-over');
-        
-        // Visual indicator for position
-        const rect = row.getBoundingClientRect();
-        const middle = rect.top + rect.height / 2;
-        
-        if (clientY > middle) {
-            row.classList.add('drag-over-bottom');
-        } else {
-            row.classList.add('drag-over-top');
+        // Find the row we're hovering over
+        for (const row of rows) {
+            const rect = row.getBoundingClientRect();
+            if (clientY >= rect.top && clientY <= rect.bottom) {
+                this.dragOverItem = row;
+                row.classList.add('drag-over');
+                break;
+            }
         }
     }
     
-    async swapRows(dragged, target) {
+    swapRows(dragged, target) {
+        if (!dragged || !target || dragged === target) return;
+        
         const parent = dragged.parentNode;
         const draggedIndex = Array.from(parent.children).indexOf(dragged);
         const targetIndex = Array.from(parent.children).indexOf(target);
@@ -242,16 +183,18 @@ class DragDropManager {
             parent.insertBefore(dragged, target);
         }
         
-        // Update sequence numbers
+        // Update sequence numbers locally
         this.updateSequenceNumbers(parent);
         
-        // Send update to server
-        await this.updateOrderOnServer();
+        // Show save button (local changes approach)
+        if (this.mesinNama && typeof showSaveButton === 'function') {
+            showSaveButton(this.mesinNama);
+        }
     }
     
-    async completeDrag() {
+    completeDrag() {
         if (this.draggedItem && this.dragOverItem && this.draggedItem !== this.dragOverItem) {
-            await this.swapRows(this.draggedItem, this.dragOverItem);
+            this.swapRows(this.draggedItem, this.dragOverItem);
         }
         
         this.cleanupDragUI();
@@ -269,8 +212,8 @@ class DragDropManager {
             this.draggedItem.classList.remove('dragging');
         }
         
-        document.querySelectorAll('.drag-over, .drag-over-top, .drag-over-bottom').forEach(el => {
-            el.classList.remove('drag-over', 'drag-over-top', 'drag-over-bottom');
+        document.querySelectorAll('.drag-over').forEach(el => {
+            el.classList.remove('drag-over');
         });
         
         this.draggedItem = null;
@@ -279,11 +222,6 @@ class DragDropManager {
     }
     
     // Helper methods
-    getRowFromPoint(x, y) {
-        const element = document.elementFromPoint(x, y);
-        return element?.closest('.sortable-row');
-    }
-    
     updateSequenceNumbers(parent) {
         const rows = parent.querySelectorAll('.sortable-row:not(.sortable-ghost)');
         rows.forEach((row, index) => {
@@ -300,62 +238,74 @@ class DragDropManager {
             if (downBtn) downBtn.disabled = index === rows.length - 1;
         });
     }
+}
+
+// Helper function to get mesin ID from container
+function getMesinIdFromContainer(mesinNama) {
+    const container = document.querySelector(`.mesin-container[data-mesin="${mesinNama}"]`);
+    return container?.dataset.mesinId;
+}
+
+// Up/Down button functions - LOCAL version (compatible with local changes)
+function moveItemUpLocal(id, mesinNama, shift, mesinId) {
+    const row = document.getElementById(`row-${id}`);
+    if (!row) return;
     
-    async updateOrderOnServer() {
-        if (!this.mesinNama || !this.shift) return;
-        
-        const container = document.querySelector(`.sortable-container[data-mesin="${this.mesinNama}"]`);
-        if (!container) return;
-        
-        const rows = container.querySelectorAll('.sortable-row[data-id]');
-        const order = Array.from(rows).map(row => parseInt(row.dataset.id));
-        
-        try {
-            const response = await fetch('/preview-andon/reorder', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': getCsrfToken(),
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    mesin_nama: this.mesinNama,
-                    shift: this.shift,
-                    order: order
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                showSuccess('Urutan berhasil disimpan!');
-                
-                // Schedule will be recalculated automatically
-                // We can optionally refresh just this mesin's data
-                setTimeout(() => {
-                    // Update start/finish times if needed
-                    this.updateScheduleTimes(container);
-                }, 500);
-            } else {
-                throw new Error(data.message || 'Update failed');
-            }
-        } catch (error) {
-            console.error('Update order error:', error);
-            showError('Gagal menyimpan urutan');
-            // Reload to revert changes
-            setTimeout(() => location.reload(), 1000);
-        }
-    }
+    const prevRow = row.previousElementSibling;
+    if (!prevRow || !prevRow.classList.contains('sortable-row')) return;
     
-    updateScheduleTimes(container) {
-        // This is a placeholder - in real implementation, you might want to
-        // fetch updated schedule data from server or recalculate locally
-        const rows = container.querySelectorAll('.sortable-row');
-        // Could update start/finish times here if needed
+    // Swap in UI
+    row.parentNode.insertBefore(row, prevRow);
+    
+    // Update sequence numbers
+    updateSequenceNumbersLocal(mesinId);
+    
+    // Show save button
+    if (typeof showSaveButton === 'function') {
+        showSaveButton(mesinNama);
     }
 }
 
-// Up/Down button functions (fallback)
+function moveItemDownLocal(id, mesinNama, shift, mesinId) {
+    const row = document.getElementById(`row-${id}`);
+    if (!row) return;
+    
+    const nextRow = row.nextElementSibling;
+    if (!nextRow || !nextRow.classList.contains('sortable-row')) return;
+    
+    // Swap in UI
+    row.parentNode.insertBefore(nextRow, row);
+    
+    // Update sequence numbers
+    updateSequenceNumbersLocal(mesinId);
+    
+    // Show save button
+    if (typeof showSaveButton === 'function') {
+        showSaveButton(mesinNama);
+    }
+}
+
+function updateSequenceNumbersLocal(mesinId) {
+    const tableBody = document.querySelector(`#mesin-container-${mesinId} tbody`);
+    if (!tableBody) return;
+    
+    const rows = tableBody.querySelectorAll('tr.sortable-row');
+    rows.forEach((row, index) => {
+        const seqElement = row.querySelector('.sequence-number');
+        if (seqElement) {
+            seqElement.textContent = index + 1;
+        }
+        
+        // Update up/down button states
+        const upBtn = row.querySelector('.up-btn');
+        const downBtn = row.querySelector('.down-btn');
+        
+        if (upBtn) upBtn.disabled = index === 0;
+        if (downBtn) downBtn.disabled = index === rows.length - 1;
+    });
+}
+
+// Legacy functions for backwards compatibility (direct server update)
 async function moveItemUp(id, mesinNama, shift) {
     const row = document.querySelector(`.sortable-row[data-id="${id}"]`);
     if (!row) return;
@@ -413,7 +363,7 @@ async function updateOrderOnServer(mesinNama, shift) {
     const order = Array.from(rows).map(row => parseInt(row.dataset.id));
     
     try {
-        const response = await fetch('/preview-andon/reorder', {
+        const response = await fetch('/andon/reorder', {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': getCsrfToken(),
@@ -430,13 +380,17 @@ async function updateOrderOnServer(mesinNama, shift) {
         const data = await response.json();
         
         if (data.success) {
-            showSuccess('Urutan berhasil disimpan!');
+            if (typeof showSuccess === 'function') {
+                showSuccess('Urutan berhasil disimpan!');
+            }
         } else {
             throw new Error(data.message || 'Update failed');
         }
     } catch (error) {
         console.error('Update order error:', error);
-        showError('Gagal menyimpan urutan');
+        if (typeof showError === 'function') {
+            showError('Gagal menyimpan urutan');
+        }
         location.reload();
     }
 }
@@ -450,8 +404,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Export functions for global use
     window.moveItemUp = moveItemUp;
     window.moveItemDown = moveItemDown;
+    window.moveItemUpLocal = moveItemUpLocal;
+    window.moveItemDownLocal = moveItemDownLocal;
     window.updateSequenceNumbersInContainer = updateSequenceNumbersInContainer;
+    window.updateSequenceNumbersLocal = updateSequenceNumbersLocal;
 });
 
 // Make manager available globally
-window.dragDropManager = dragDropManager;
+window.DragDropManager = DragDropManager;

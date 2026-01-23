@@ -43,6 +43,37 @@ function hideGlobalLoading() {
     }
 }
 
+// Helper function to format datetime for input
+function formatDateTimeForInput(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    
+    // Format: YYYY-MM-DDTHH:mm
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+// Helper function to format datetime for display
+function formatDateTimeForDisplay(dateString) {
+    if (!dateString || dateString === '-') return '-';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '-';
+    
+    return date.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
 // Sync data
 async function syncData() {
     const syncButton = document.getElementById('syncButton');
@@ -92,6 +123,8 @@ function updateShiftLocal(mesinNama, checkbox) {
     
     if (newShift === oldShift) return;
     
+    console.log('Shift changed:', { mesinNama, oldShift, newShift });
+    
     // Update checkbox data attribute
     checkbox.dataset.shift = newShift;
     
@@ -99,7 +132,79 @@ function updateShiftLocal(mesinNama, checkbox) {
     updateShiftUILocal(checkbox, newShift, mesinNama);
     
     // Tampilkan save button
-    showSaveButton(mesinNama);
+    const mesinContainer = checkbox.closest('.mesin-container');
+    const mesinId = mesinContainer?.dataset.mesinId;
+    if (mesinId) {
+        showSaveButtonById(mesinId);
+    }
+    
+    // Simpan shift ke localStorage sebagai backup
+    if (mesinId) {
+        localStorage.setItem(`shift-${mesinId}`, newShift);
+    }
+}
+
+// Show save button by mesin ID
+function showSaveButtonById(mesinId) {
+    const saveBtn = document.getElementById(`save-btn-${mesinId}`);
+    const discardBtn = document.getElementById(`discard-btn-${mesinId}`);
+    
+    if (saveBtn) saveBtn.classList.remove('hidden');
+    if (discardBtn) discardBtn.classList.remove('hidden');
+}
+
+// Discard changes
+function discardChanges(mesinId) {
+    if (!confirm('Batalkan semua perubahan? Perubahan lokal akan hilang.')) {
+        return;
+    }
+    
+    // Reload halaman untuk reset ke state awal
+    showGlobalLoading('Membatalkan perubahan...');
+    setTimeout(() => {
+        location.reload();
+    }, 500);
+}
+
+// Fungsi untuk restore shift dari localStorage saat page load
+function restoreShiftFromStorage() {
+    document.querySelectorAll('.mesin-container').forEach(container => {
+        const mesinId = container.dataset.mesinId;
+        if (!mesinId) return;
+        
+        const savedShift = localStorage.getItem(`shift-${mesinId}`);
+        if (savedShift) {
+            const shiftToggle = container.querySelector('input[type="checkbox"][data-mesin]');
+            if (shiftToggle) {
+                // Set UI sesuai dengan saved shift
+                const shouldBeChecked = savedShift === '2';
+                if (shiftToggle.checked !== shouldBeChecked) {
+                    shiftToggle.checked = shouldBeChecked;
+                    shiftToggle.dataset.shift = savedShift;
+                    
+                    // Update UI
+                    const mesinNama = container.dataset.mesinNama || container.dataset.mesin;
+                    updateShiftUILocal(shiftToggle, savedShift, mesinNama);
+                }
+            }
+        }
+    });
+}
+
+// Update UI after shift change - LOCAL version
+function updateShiftUILocal(checkbox, newShift, mesinNama) {
+    const mesinCard = checkbox.closest('.mesin-container');
+    const shiftBadge = mesinCard.querySelector('.shift-badge');
+    const sortableContainer = mesinCard.querySelector('.sortable-container');
+    
+    if (shiftBadge) {
+        shiftBadge.textContent = newShift == '1' ? '07:00' : '19:00';
+        shiftBadge.className = `shift-badge shift-${newShift}`;
+    }
+    
+    if (sortableContainer) {
+        sortableContainer.dataset.shift = newShift;
+    }
 }
 
 // Update UI after shift change - LOCAL version
@@ -148,6 +253,28 @@ async function openUpdateModal(id) {
             document.getElementById('currentActualDisplay').textContent = parseInt(data.data.actual_qty || 0).toLocaleString('id-ID');
             document.getElementById('actual_qty').value = data.data.actual_qty || '';
             
+            // Set planned time display
+            const plannedStartDisplay = document.getElementById('plannedStartDisplay');
+            const plannedFinishDisplay = document.getElementById('plannedFinishDisplay');
+            
+            if (plannedStartDisplay) {
+                plannedStartDisplay.textContent = formatDateTimeForDisplay(data.data.calculated_start);
+            }
+            if (plannedFinishDisplay) {
+                plannedFinishDisplay.textContent = formatDateTimeForDisplay(data.data.calculated_finish);
+            }
+            
+            // Set start_actual and finish_actual inputs
+            const startActualInput = document.getElementById('start_actual');
+            const finishActualInput = document.getElementById('finish_actual');
+            
+            if (startActualInput) {
+                startActualInput.value = formatDateTimeForInput(data.data.start_actual);
+            }
+            if (finishActualInput) {
+                finishActualInput.value = formatDateTimeForInput(data.data.finish_actual);
+            }
+            
             // Calculate initial efficiency
             calculateEstimatedEfficiency();
             
@@ -188,6 +315,12 @@ function closeUpdateModal() {
             document.getElementById('error-actual').textContent = '';
             document.getElementById('estimatedEfficiency').textContent = '0%';
             document.getElementById('estimatedEfficiency').className = 'text-lg font-bold text-gray-900';
+            
+            // Reset planned time displays
+            const plannedStartDisplay = document.getElementById('plannedStartDisplay');
+            const plannedFinishDisplay = document.getElementById('plannedFinishDisplay');
+            if (plannedStartDisplay) plannedStartDisplay.textContent = '-';
+            if (plannedFinishDisplay) plannedFinishDisplay.textContent = '-';
         }, 300);
     }
 }
@@ -201,7 +334,7 @@ function calculateEstimatedEfficiency() {
     if (!actualInput || !planQtyDisplay || !estimatedEfficiency) return;
     
     const actualQty = parseFloat(actualInput.value) || 0;
-    const planQtyText = planQtyDisplay.textContent.replace(/,/g, '');
+    const planQtyText = planQtyDisplay.textContent.replace(/,/g, '').replace(/\./g, '');
     const planQty = parseFloat(planQtyText) || 0;
     
     if (planQty > 0) {
@@ -498,21 +631,35 @@ function showSaveButton(mesinNama) {
     if (discardBtn) discardBtn.classList.remove('hidden');
 }
 
-// Save table changes to server
-async function saveTableChanges(mesinNama, shift, mesinId) {
+// Save table changes to server - VERSI DIPERBAIKI
+async function saveTableChanges(mesinId) {
     showGlobalLoading('Menyimpan perubahan...');
     
     try {
-        // Collect all changes
         const mesinContainer = document.querySelector(`#mesin-container-${mesinId}`);
         if (!mesinContainer) return;
         
+        // Ambil data dari container
+        const mesinNama = mesinContainer.dataset.mesinNama || mesinContainer.dataset.mesin;
+        
+        // AMBIL SHIFT DARI UI SAAT INI (bukan dari parameter)
+        const shiftToggle = mesinContainer.querySelector('input[type="checkbox"][data-mesin]');
+        const currentShift = shiftToggle ? (shiftToggle.checked ? '2' : '1') : '1';
+        
+        console.log('Saving changes:', {
+            mesinId: mesinId,
+            mesinNama: mesinNama,
+            currentShift: currentShift,
+            shiftToggleChecked: shiftToggle ? shiftToggle.checked : 'null'
+        });
+        
+        // Collect all changes from table rows
         const rows = mesinContainer.querySelectorAll('tr.sortable-row');
         const updates = [];
         
         rows.forEach((row, index) => {
             const id = row.dataset.id;
-            const checkbox = row.querySelector('input[type="checkbox"]');
+            const checkbox = row.querySelector('input[type="checkbox"].status-checkbox');
             const isActive = checkbox ? checkbox.checked : true;
             
             updates.push({
@@ -522,11 +669,14 @@ async function saveTableChanges(mesinNama, shift, mesinId) {
             });
         });
         
-        // Get current shift
-        const shiftToggle = mesinContainer.querySelector('input[type="checkbox"][data-mesin]');
-        const currentShift = shiftToggle ? (shiftToggle.checked ? '2' : '1') : shift;
+        console.log('Sending bulk update:', {
+            mesin_nama: mesinNama,
+            shift: currentShift,
+            update_count: updates.length,
+            updates: updates
+        });
         
-        // Send bulk update
+        // Send bulk update to server
         const response = await fetch('/andon/bulk-update', {
             method: 'POST',
             headers: {
@@ -535,16 +685,18 @@ async function saveTableChanges(mesinNama, shift, mesinId) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
+                mesin_id: mesinId,
                 mesin_nama: mesinNama,
-                shift: currentShift,
-                updates: updates
+                shift: currentShift, // SHIFT YANG AKTIF DI UI
+                updates: updates,
+                update_shift: true // Flag untuk update shift
             })
         });
         
         const data = await response.json();
         
         if (data.success) {
-            // Hide save button and show success
+            // Hide save and discard buttons
             const saveBtn = document.getElementById(`save-btn-${mesinId}`);
             const discardBtn = document.getElementById(`discard-btn-${mesinId}`);
             const successMsg = document.getElementById(`save-success-${mesinId}`);
@@ -556,16 +708,81 @@ async function saveTableChanges(mesinNama, shift, mesinId) {
                 setTimeout(() => successMsg.classList.add('hidden'), 3000);
             }
             
-            // Refresh untuk update schedule
-            setTimeout(() => refreshData(), 2000);
+            // Update shift data attribute
+            if (shiftToggle) {
+                shiftToggle.dataset.shift = currentShift;
+            }
             
+            // Tampilkan success
             showSuccess(data.message);
+            
+            // Refresh setelah delay untuk update schedule dari server
+            setTimeout(() => {
+                // Sebelum refresh, simpan state shift ke localStorage
+                localStorage.setItem(`shift-${mesinId}`, currentShift);
+                refreshData();
+            }, 2000);
+            
         } else {
             throw new Error(data.message || 'Gagal menyimpan perubahan');
         }
     } catch (error) {
         console.error('Save changes error:', error);
         showError(error.message || 'Terjadi kesalahan saat menyimpan');
+    } finally {
+        hideGlobalLoading();
+    }
+}
+
+// Update shift dan langsung save ke server
+async function updateShiftAndSave(mesinNama, checkbox) {
+    const newShift = checkbox.checked ? '2' : '1';
+    const oldShift = checkbox.dataset.shift || '1';
+    
+    if (newShift === oldShift) return;
+    
+    showGlobalLoading('Mengubah shift...');
+    
+    try {
+        const mesinContainer = checkbox.closest('.mesin-container');
+        const mesinId = mesinContainer.dataset.mesinId;
+        
+        // Update UI lokal
+        updateShiftUILocal(checkbox, newShift, mesinNama);
+        
+        // Kirim perubahan shift ke server
+        const response = await fetch('/andon/update-shift', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': getCsrfToken(),
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                mesin_nama: mesinNama,
+                mesin_id: mesinId,
+                shift: newShift,
+                old_shift: oldShift
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Update data attribute
+            checkbox.dataset.shift = newShift;
+            
+            // Refresh data untuk mendapatkan schedule sesuai shift baru
+            refreshData();
+        } else {
+            // Rollback UI
+            checkbox.checked = !checkbox.checked;
+            updateShiftUILocal(checkbox, oldShift, mesinNama);
+            throw new Error(data.message || 'Gagal mengubah shift');
+        }
+    } catch (error) {
+        console.error('Update shift error:', error);
+        showError(error.message || 'Terjadi kesalahan saat mengubah shift');
     } finally {
         hideGlobalLoading();
     }
@@ -584,7 +801,7 @@ function discardChanges(mesinNama, mesinId) {
     }, 500);
 }
 
-/// Submit to Andon Mesin - FIXED dengan start/finish time
+// Submit to Andon Mesin - HANYA KIRIM DATA AKTIF
 async function submitToAndonMesin(mesinNama, mesinId) {
     showGlobalLoading('Submitting to Andon Mesin...');
     
@@ -602,47 +819,115 @@ async function submitToAndonMesin(mesinNama, mesinId) {
         const shiftToggle = mesinContainer?.querySelector('input[type="checkbox"][data-mesin]');
         const currentShift = shiftToggle ? (shiftToggle.checked ? '2' : '1') : '1';
         
-        // Kumpulkan data dari tabel untuk dikirim
+        // Kumpulkan data dari tabel untuk dikirim - HANYA YANG AKTIF
         const rows = mesinContainer?.querySelectorAll('tr.sortable-row') || [];
         const dataItems = [];
+        let activeCount = 0;
+        let sortOrderCounter = 1; // Reset sort order untuk hanya data aktif
         
         rows.forEach((row, index) => {
             const checkbox = row.querySelector('input.status-checkbox');
+            const rowId = row.dataset.id;
+            const isActive = checkbox ? checkbox.checked : true;
+            
+            // ✅ HANYA PROSES DATA YANG AKTIF
+            if (!isActive) {
+                console.log(`Skipping inactive row ${rowId}`);
+                return; // Skip ke row berikutnya
+            }
+            
+            activeCount++;
             
             // Ambil data dari kolom tabel
             const cells = row.querySelectorAll('td');
             
-            // Kolom: 0=Status, 1=Urutan, 2=PartNo, 3=GSPH, 4=Start, 5=Finish, 6=Plan, 7=Actual, 8=Efficiency, 9=Aksi
+            // ✅ URUTAN KOLOM YANG BENAR:
+            // 0=Status, 1=Urutan, 2=PartNo, 3=GSPH, 4=StartPlan, 5=StartAct, 6=FinishPlan, 7=FinishAct, 8=Plan, 9=Actual, 10=Eff, 11=Aksi
+            
             const partNo = cells[2]?.textContent?.trim() || '';
             const gsph = cells[3]?.textContent?.trim() || '0';
             const startTime = cells[4]?.textContent?.trim() || '-';
-            const finishTime = cells[5]?.textContent?.trim() || '-';
-            const planQty = cells[6]?.textContent?.trim()?.replace(/\./g, '')?.replace(/,/g, '') || '0';
             
-            // Actual qty bisa "Belum diisi" atau angka
-            let actualQtyText = cells[7]?.textContent?.trim() || '0';
-            if (actualQtyText.toLowerCase().includes('belum')) {
+            // Start Actual
+            const startActualCell = cells[5]?.textContent?.trim() || '';
+            const startActual = (startActualCell && startActualCell !== '-' && !startActualCell.toLowerCase().includes('belum') && !startActualCell.toLowerCase().includes('isi')) 
+                ? startActualCell : null;
+            
+            // Finish Plan  
+            const finishTime = cells[6]?.textContent?.trim() || '-';
+            
+            // Finish Actual
+            const finishActualCell = cells[7]?.textContent?.trim() || '';
+            const finishActual = (finishActualCell && finishActualCell !== '-' && !finishActualCell.toLowerCase().includes('belum') && !finishActualCell.toLowerCase().includes('isi')) 
+                ? finishActualCell : null;
+            
+            const planQty = cells[8]?.textContent?.trim()?.replace(/\./g, '')?.replace(/,/g, '') || '0';
+            
+            // Actual qty
+            let actualQtyText = cells[9]?.textContent?.trim() || '0';
+            if (actualQtyText.toLowerCase().includes('belum') || actualQtyText.toLowerCase().includes('isi') || actualQtyText === '-') {
                 actualQtyText = '0';
             }
             const actualQty = actualQtyText.replace(/\./g, '')?.replace(/,/g, '') || '0';
             
             // Efficiency dari badge
-            const efficiencyEl = cells[8]?.querySelector('.efficiency-badge');
+            const efficiencyEl = cells[10]?.querySelector('.efficiency-badge');
             const efficiency = efficiencyEl?.textContent?.trim()?.replace('%', '')?.replace(',', '.') || '0';
             
+            // Parse tanggal start dan finish actual ke format yang benar
+            let startActualParsed = null;
+            let finishActualParsed = null;
+            
+            if (startActual) {
+                // Coba parse format "d/m H:i"
+                const parts = startActual.split(' ');
+                if (parts.length === 2) {
+                    const datePart = parts[0]; // "d/m"
+                    const timePart = parts[1]; // "H:i"
+                    const [day, month] = datePart.split('/');
+                    const [hour, minute] = timePart.split(':');
+                    
+                    const today = new Date();
+                    const year = today.getFullYear();
+                    startActualParsed = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')} ${hour}:${minute}:00`;
+                }
+            }
+            
+            if (finishActual) {
+                // Coba parse format "d/m H:i"
+                const parts = finishActual.split(' ');
+                if (parts.length === 2) {
+                    const datePart = parts[0]; // "d/m"
+                    const timePart = parts[1]; // "H:i"
+                    const [day, month] = datePart.split('/');
+                    const [hour, minute] = timePart.split(':');
+                    
+                    const today = new Date();
+                    const year = today.getFullYear();
+                    finishActualParsed = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')} ${hour}:${minute}:00`;
+                }
+            }
+            
             dataItems.push({
-                id: parseInt(row.dataset.id),
+                id: parseInt(rowId),
                 part_no: partNo,
                 gsph: parseFloat(gsph.replace(',', '.')) || 0,
                 start_time: startTime !== '-' ? startTime : null,
+                start_actual: startActualParsed,
                 finish_time: finishTime !== '-' ? finishTime : null,
+                finish_actual: finishActualParsed,
                 plan_qty: parseInt(planQty) || 0,
                 actual_qty: parseInt(actualQty) || 0,
                 efficiency: parseFloat(efficiency) || 0,
-                is_active: checkbox ? checkbox.checked : true,
-                sort_order: index + 1
+                is_active: true, // Selalu true karena ini data aktif
+                sort_order: sortOrderCounter++ // Urutan baru hanya untuk data aktif
             });
         });
+        
+        // Validasi: minimal ada 1 data aktif
+        if (activeCount === 0) {
+            throw new Error('Tidak ada data aktif untuk disubmit. Aktifkan setidaknya 1 data.');
+        }
         
         // Tanggal hari ini format Y-m-d
         const today = new Date();
@@ -650,13 +935,29 @@ async function submitToAndonMesin(mesinNama, mesinId) {
                         String(today.getMonth() + 1).padStart(2, '0') + '-' + 
                         String(today.getDate()).padStart(2, '0');
         
-        console.log('Submitting data:', {
+        console.log(`Submitting ${activeCount} active items out of ${rows.length} total rows:`, {
             mesin_id: mesinId,
             mesin_nama: mesinNama,
             shift: currentShift,
             tanggal: tanggal,
             data: dataItems
         });
+        
+        // Tampilkan konfirmasi
+        const confirmed = await Swal.fire({
+            title: `Submit ${activeCount} Data Aktif?`,
+            text: `Hanya data aktif akan disubmit (${activeCount} dari ${rows.length} total data)`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Submit',
+            cancelButtonText: 'Batal',
+            confirmButtonColor: '#10B981',
+            cancelButtonColor: '#6B7280'
+        });
+        
+        if (!confirmed.isConfirmed) {
+            throw new Error('Submit dibatalkan');
+        }
         
         const response = await fetch('/andon/submit-to-mesin', {
             method: 'POST',
@@ -670,7 +971,9 @@ async function submitToAndonMesin(mesinNama, mesinId) {
                 mesin_nama: mesinNama,
                 shift: currentShift,
                 tanggal: tanggal,
-                data: dataItems
+                data: dataItems,
+                total_active: activeCount,
+                total_rows: rows.length
             })
         });
         
@@ -683,7 +986,7 @@ async function submitToAndonMesin(mesinNama, mesinId) {
             // Update badge dengan tanggal submit
             updateSubmitBadge(mesinId, new Date().toISOString());
             
-            showSuccess(data.message);
+            showSuccess(`${activeCount} data aktif berhasil disubmit ke Andon Mesin!`);
             
             setTimeout(() => {
                 if (submitLoading) submitLoading.classList.add('hidden');
@@ -700,7 +1003,16 @@ async function submitToAndonMesin(mesinNama, mesinId) {
         }
     } catch (error) {
         console.error('Submit error:', error);
-        showError(error.message || 'Terjadi kesalahan saat submit');
+        
+        // Tampilkan error khusus untuk data kosong
+        if (error.message.includes('Tidak ada data aktif')) {
+            showError(error.message);
+        } else if (error.message.includes('Submit dibatalkan')) {
+            // Tidak perlu tampilkan error untuk cancel
+            console.log('User cancelled submit');
+        } else {
+            showError(error.message || 'Terjadi kesalahan saat submit');
+        }
         
         const submitBtn = document.getElementById(`submit-btn-${mesinId}`);
         const submitLoading = document.getElementById(`submit-loading-${mesinId}`);

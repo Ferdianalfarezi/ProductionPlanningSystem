@@ -94,24 +94,52 @@ class PreviewAndonController extends Controller
     public function updateActual(Request $request, $id)
     {
         $request->validate([
-            'actual_qty' => 'required|integer|min:0'
+            'actual_qty' => 'required|integer|min:0',
+            'start_actual' => 'nullable|date',
+            'finish_actual' => 'nullable|date',
         ]);
         
-        $syncService = new PreviewAndonSyncService();
-        $result = $syncService->updateActual($id, $request->actual_qty);
-        
-        if ($result) {
+        try {
+            $previewAndon = PreviewAndon::findOrFail($id);
+            
+            // Update actual_qty
+            $previewAndon->actual_qty = $request->actual_qty;
+            
+            // Update start_actual jika ada
+            if ($request->has('start_actual') && $request->start_actual) {
+                $previewAndon->start_actual = $request->start_actual;
+            }
+            
+            // Update finish_actual jika ada
+            if ($request->has('finish_actual') && $request->finish_actual) {
+                $previewAndon->finish_actual = $request->finish_actual;
+            }
+            
+            // Hitung efficiency
+            if ($previewAndon->plan_qty > 0) {
+                $previewAndon->efficiency = ($previewAndon->actual_qty / $previewAndon->plan_qty) * 100;
+            }
+            
+            $previewAndon->save();
+            
             return response()->json([
                 'success' => true,
-                'message' => 'Actual quantity berhasil diupdate!',
-                'data' => $result
+                'message' => 'Data actual berhasil diupdate!',
+                'data' => [
+                    'id' => $previewAndon->id,
+                    'actual_qty' => $previewAndon->actual_qty,
+                    'start_actual' => $previewAndon->start_actual,
+                    'finish_actual' => $previewAndon->finish_actual,
+                    'efficiency' => $previewAndon->efficiency
+                ]
             ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal update data: ' . $e->getMessage()
+            ], 500);
         }
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Gagal update actual quantity.'
-        ], 404);
     }
     
     public function detail($id)
@@ -136,6 +164,8 @@ class PreviewAndonController extends Controller
                 'shift' => $previewAndon->shift,
                 'calculated_start' => $previewAndon->calculated_start,
                 'calculated_finish' => $previewAndon->calculated_finish,
+                'start_actual' => $previewAndon->start_actual,
+                'finish_actual' => $previewAndon->finish_actual,
                 'production_duration' => $previewAndon->production_duration,
             ]
         ]);
@@ -227,6 +257,8 @@ class PreviewAndonController extends Controller
                         'gsph' => $item->gsph,
                         'calculated_start' => $item->calculated_start,
                         'calculated_finish' => $item->calculated_finish,
+                        'start_actual' => $item->start_actual,
+                        'finish_actual' => $item->finish_actual,
                         'plan_qty' => $item->plan_qty,
                         'actual_qty' => $item->actual_qty,
                         'efficiency' => $item->efficiency,
@@ -277,6 +309,8 @@ class PreviewAndonController extends Controller
                         'gsph' => $item->gsph,
                         'calculated_start' => $item->calculated_start,
                         'calculated_finish' => $item->calculated_finish,
+                        'start_actual' => $item->start_actual,
+                        'finish_actual' => $item->finish_actual,
                         'plan_qty' => $item->plan_qty,
                         'actual_qty' => $item->actual_qty,
                         'efficiency' => $item->efficiency,
