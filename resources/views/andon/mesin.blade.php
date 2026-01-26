@@ -7,7 +7,6 @@
 @section('content')
     <!-- Filter & Summary Bar -->
     <div id="filterBox" class="mt-3 mb-1">
-
         <div class="card border-0 " style="background-color: #000000; border: 2px solid #ffffff;">
             <div class="card-body py-2 px-4">
                 <div class="d-flex align-items-center justify-content-center gap-3 flex-wrap">
@@ -55,16 +54,6 @@
                             <i class="bi bi-arrow-counterclockwise"></i>
                         </button>
                     </div>
-
-                    <div class="vr bg-white" style="height: 30px;"></div>
-
-                    {{-- <!-- Export Button -->
-                    <div class="d-flex align-items-center gap-2">
-                        <button onclick="exportToExcel()" class="btn btn-sm btn-light px-3">
-                            <i class="bi bi-file-earmark-excel me-1"></i> Export
-                        </button>
-                    </div> --}}
-
                 </div>
             </div>
         </div>
@@ -298,22 +287,6 @@
         font-weight: normal;
     }
     
-    .horizontal-shifts {
-        display: flex;
-        gap: 20px;
-    }
-    
-    .shift-column {
-        flex: 1;
-        min-width: 0;
-    }
-    
-    @media (max-width: 1200px) {
-        .horizontal-shifts {
-            flex-direction: column;
-        }
-    }
-    
     /* Table styling */
     .table-dark {
         --bs-table-bg: #000000;
@@ -411,17 +384,30 @@
         min-width: 70px;
     }
     
-    /* Alignment */
-    .text-start {
-        text-align: left !important;
+    /* Shift header */
+    .shift-header {
+        background: #000000;
+        border: 2px solid #ffffff;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        text-align: center;
     }
     
-    .text-end {
-        text-align: right !important;
+    .shift-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 5px;
     }
     
-    .text-center {
-        text-align: center !important;
+    .shift-subtitle {
+        font-size: 0.9rem;
+        color: #cccccc;
+    }
+    
+    /* Mesin container */
+    .mesin-container {
+        margin-bottom: 30px;
     }
 </style>
 @endpush
@@ -554,36 +540,74 @@ function renderAndonMesinData(data) {
     const container = document.getElementById('andonMesinResults');
     container.innerHTML = '';
     
-    // Group by mesin
-    const groupedData = {};
-    data.forEach(item => {
-        const key = item.mesin_id;
-        if (!groupedData[key]) groupedData[key] = [];
-        groupedData[key].push(item);
-    });
+    // Jika filter shift dipilih, tampilkan hanya shift tersebut
+    const selectedShift = document.getElementById('filterShift').value;
     
-    // Render setiap mesin
-    Object.entries(groupedData).forEach(([mesinId, items]) => {
-        const mesinName = items[0]?.mesin_nama || 'Mesin';
-        const card = createMesinCard(mesinName, items);
-        container.appendChild(card);
-    });
+    if (selectedShift) {
+        // Filter data berdasarkan shift yang dipilih
+        const filteredData = data.filter(item => item.shift === selectedShift);
+        if (filteredData.length > 0) {
+            renderSingleShift(selectedShift, filteredData, container);
+        } else {
+            container.innerHTML = `
+                <div class="card border-0 bg-black">
+                    <div class="card-body text-center py-5" style="border: 2px solid #ffffff;">
+                        <i class="bi bi-info-circle fs-1 text-white mb-3"></i>
+                        <h5 class="text-white mb-2">Tidak Ada Data Shift ${selectedShift}</h5>
+                        <p class="text-white mb-4">Tidak ada data untuk Shift ${selectedShift} dengan filter yang dipilih.</p>
+                        <button onclick="resetFilters()" class="btn btn-outline-light btn-sm">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filter
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    } else {
+        // Jika tidak ada filter shift, tampilkan semua shift secara terpisah
+        const shift1Data = data.filter(item => item.shift === '1');
+        const shift2Data = data.filter(item => item.shift === '2');
+        
+        if (shift1Data.length > 0) {
+            renderSingleShift('1', shift1Data, container);
+        }
+        
+        if (shift2Data.length > 0) {
+            renderSingleShift('2', shift2Data, container);
+        }
+        
+        // Jika tidak ada data sama sekali
+        if (shift1Data.length === 0 && shift2Data.length === 0) {
+            container.innerHTML = `
+                <div class="card border-0 bg-black">
+                    <div class="card-body text-center py-5" style="border: 2px solid #ffffff;">
+                        <i class="bi bi-info-circle fs-1 text-white mb-3"></i>
+                        <h5 class="text-white mb-2">Tidak Ada Data</h5>
+                        <p class="text-white mb-4">Tidak ada data untuk semua shift dengan filter yang dipilih.</p>
+                        <button onclick="resetFilters()" class="btn btn-outline-light btn-sm">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filter
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    }
 }
 
-function createMesinCard(mesinName, items) {
-    const card = document.createElement('div');
-    card.className = 'mesin-card';
+function renderSingleShift(shiftNumber, shiftData, container) {
+    // Header Shift
+    const shiftHeader = document.createElement('div');
+    shiftHeader.className = 'shift-header';
     
-    // Hitung statistik
-    let totalRows = 0, activeRows = 0, totalPlan = 0, totalActual = 0, totalEfficiency = 0;
-    let hasShifts = new Set();
+    // Hitung statistik shift
+    let totalSubmission = shiftData.length;
+    let totalMesin = new Set();
+    let totalRows = 0, totalPlan = 0, totalActual = 0, totalEfficiency = 0;
     
-    items.forEach(item => {
+    shiftData.forEach(item => {
+        totalMesin.add(item.mesin_id);
         const dataRows = item.data_json || [];
         totalRows += dataRows.length;
-        hasShifts.add(item.shift);
         dataRows.forEach(row => {
-            if (row.is_active) activeRows++;
             totalPlan += row.plan_qty || 0;
             totalActual += row.actual_qty || 0;
             totalEfficiency += row.efficiency || 0;
@@ -591,64 +615,98 @@ function createMesinCard(mesinName, items) {
     });
     
     const avgEfficiency = totalRows > 0 ? (totalEfficiency / totalRows).toFixed(1) : 0;
+    
+    shiftHeader.innerHTML = `
+        <div class="shift-title">SHIFT ${shiftNumber}</div>
+        <div class="shift-subtitle">
+            ${totalMesin.size} Mesin | ${totalSubmission} Submission | ${totalRows} Rows | 
+            Plan: ${formatNumber(totalPlan)} | Actual: ${formatNumber(totalActual)} | 
+            Efficiency: <span class="efficiency-badge ${getEfficiencyClass(avgEfficiency)}">${avgEfficiency}%</span>
+        </div>
+    `;
+    
+    container.appendChild(shiftHeader);
+    
+    // Group data per mesin
+    const groupedByMesin = {};
+    shiftData.forEach(item => {
+        const mesinId = item.mesin_id;
+        const mesinName = item.mesin_nama;
+        const key = `${mesinId}_${mesinName}`;
+        
+        if (!groupedByMesin[key]) {
+            groupedByMesin[key] = {
+                mesin_id: mesinId,
+                mesin_name: mesinName,
+                submissions: []
+            };
+        }
+        groupedByMesin[key].submissions.push(item);
+    });
+    
+    // Render setiap mesin
+    Object.values(groupedByMesin).forEach(mesinData => {
+        container.appendChild(createMesinCard(mesinData, shiftNumber));
+    });
+}
+
+function createMesinCard(mesinData, shiftNumber) {
+    const container = document.createElement('div');
+    container.className = 'mesin-container';
+    
+    // Hitung statistik mesin
+    const submissions = mesinData.submissions;
+    let totalPlan = 0, totalActual = 0, totalEfficiency = 0, totalRows = 0;
+    let totalGSPH = 0, gsphCount = 0;
+    
+    submissions.forEach(submission => {
+        const dataRows = submission.data_json || [];
+        totalRows += dataRows.length;
+        dataRows.forEach(row => {
+            totalPlan += row.plan_qty || 0;
+            totalActual += row.actual_qty || 0;
+            totalEfficiency += row.efficiency || 0;
+            if (row.gsph) {
+                totalGSPH += parseFloat(row.gsph);
+                gsphCount++;
+            }
+        });
+    });
+    
+    const avgEfficiency = totalRows > 0 ? (totalEfficiency / totalRows).toFixed(0) : 0;
+    const avgGSPH = gsphCount > 0 ? (totalGSPH / gsphCount).toFixed(1) : 0;
     const efficiencyClass = getEfficiencyClass(avgEfficiency);
     
-    // Pisahkan data berdasarkan shift
-    const shift1Data = items.filter(item => item.shift === '1');
-    const shift2Data = items.filter(item => item.shift === '2');
-    
-    card.innerHTML = `
-        <div class="mesin-title">
-            <div>
-                <span>${mesinName}</span>
-                <span class="mesin-subtitle">
-                    ${items.length} submission | 
-                    Shift: ${Array.from(hasShifts).sort().join(', ')} | 
-                    Rows: ${totalRows} | 
-                    <span class="efficiency-badge ${efficiencyClass}">Avg: ${avgEfficiency}%</span>
-                </span>
+    container.innerHTML = `
+        <div class="mesin-card">
+            <div class="mesin-title">
+                <div>
+                    <span>${mesinData.mesin_name}</span>
+                    <span class="mesin-subtitle">
+                        ${submissions.length} submission | ${totalRows} rows | 
+                        Plan: ${formatNumber(totalPlan)} | Actual: ${formatNumber(totalActual)} | 
+                        <span class="efficiency-badge ${efficiencyClass}">Avg: ${avgEfficiency}%</span>
+                    </span>
+                </div>
+                <div class="text-end">
+                    <small class="d-block">Shift ${shiftNumber}</small>
+                    <small>${formatDate(submissions[0]?.tanggal) || '-'}</small>
+                </div>
             </div>
-            <div class="text-end">
-                <small class="d-block">Submitted</small>
-                <small>${items[0]?.submitted_date || '-'} ${items[0]?.submitted_time || ''}</small>
-            </div>
-        </div>
-        <div class="p-4">
-            <div class="horizontal-shifts">
-                ${createShiftColumn('1', shift1Data)}
-                ${createShiftColumn('2', shift2Data)}
+            
+            <div class="p-4">
+                ${submissions.map((submission, index) => createSubmissionTable(submission, index)).join('')}
             </div>
         </div>
     `;
     
-    return card;
-}
-
-function createShiftColumn(shiftNumber, shiftData) {
-    if (shiftData.length === 0) {
-        return `
-            <div class="shift-column">
-                <div class="p-3 mb-3 text-center" style="border: 2px solid #ffffff; background: #000000;">
-                    <h5 class="mb-0 text-white">Shift ${shiftNumber}</h5>
-                    <small class="text-white">Tidak ada data</small>
-                </div>
-            </div>
-        `;
-    }
-    
-    let columnHTML = `<div class="shift-column">`;
-    
-    shiftData.forEach((submission, index) => {
-        columnHTML += createSubmissionTable(submission, index);
-    });
-    
-    columnHTML += `</div>`;
-    return columnHTML;
+    return container;
 }
 
 function createSubmissionTable(submission, index) {
     const submittedAt = formatDateTime(submission.submitted_at);
     let totalPlan = 0, totalActual = 0, totalEfficiency = 0, countEfficiency = 0;
+    let totalGSPH = 0, gsphCount = 0;
     
     (submission.data_json || []).forEach(row => {
         totalPlan += row.plan_qty || 0;
@@ -657,20 +715,30 @@ function createSubmissionTable(submission, index) {
             totalEfficiency += row.efficiency;
             countEfficiency++;
         }
+        if (row.gsph) {
+            totalGSPH += parseFloat(row.gsph);
+            gsphCount++;
+        }
     });
     
     const avgEfficiency = countEfficiency > 0 ? (totalEfficiency / countEfficiency).toFixed(0) : 0;
-    const totalGSPH = submission.data_json?.length > 0 ? 
-        (submission.data_json.reduce((sum, row) => sum + (parseFloat(row.gsph) || 0), 0)) / submission.data_json.length : 0;
+    const avgGSPH = gsphCount > 0 ? (totalGSPH / gsphCount).toFixed(1) : 0;
     
     return `
         <div class="mb-4 ${index > 0 ? 'mt-4' : ''}">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-primary">Shift ${submission.shift}</span>
-                    <small class="text-white">Tanggal: ${formatDate(submission.tanggal)}</small>
+                <div>
+                    <span class="badge bg-primary me-2">Submission #${index + 1}</span>
+                    <small class="text-white">Submitted: ${submittedAt}</small>
                 </div>
-                <small class="text-white">${submittedAt}</small>
+                <div>
+                    <small class="text-white me-3">
+                        Struk: ${submission.mesin_info?.struk || '-'}
+                    </small>
+                    <small class="text-white">
+                        Tonase: ${submission.mesin_info?.tonase || '-'}
+                    </small>
+                </div>
             </div>
             
             <div class="scrollable-table">
@@ -732,8 +800,8 @@ function createSubmissionTable(submission, index) {
                     <tfoot>
                         <tr class="table-active">
                             <td class="text-start fw-bold text-white" colspan="2">Total</td>
-                            <td class="quantity-cell text-white">
-                                ${formatDecimal(totalGSPH, 1)}
+                            <td class="quantity-cell fw-bold text-white">
+                                ${formatDecimal(avgGSPH, 1)}
                             </td>
                             <td colspan="4"></td>
                             <td class="quantity-cell fw-bold text-white">${formatNumber(totalPlan)}</td>
@@ -751,8 +819,7 @@ function createSubmissionTable(submission, index) {
             <div class="d-flex justify-content-between mt-2 text-white small">
                 <div>Total: ${submission.data_json?.length || 0} data</div>
                 <div>
-                    Struk: ${submission.mesin_info?.struk || '-'} | 
-                    Tonase: ${submission.mesin_info?.tonase || '-'}
+                    Submitted by: ${submission.submitted_by || '-'} at ${submission.submitted_time || '-'}
                 </div>
             </div>
         </div>
@@ -800,14 +867,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ==================== FUNGSI UTILITY ====================
-function exportToExcel() {
-    if (currentData.length === 0) { 
-        showError('Tidak ada data untuk diexport'); 
-        return; 
-    }
-    showSuccess('Export feature coming soon!');
-}
-
 function showError(message) {
     Swal.fire({ 
         icon: 'error', 
